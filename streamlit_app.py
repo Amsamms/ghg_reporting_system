@@ -364,72 +364,166 @@ def add_facility_emissions(facility_idx):
         key=f"facility_{facility_idx}_name"
     )
 
-    st.write("**Emissions Data (tCO2e/year):**")
+    # Production data
+    production = st.number_input(
+        "Production (barrels or units/year)",
+        value=100000.0,
+        min_value=0.0,
+        step=10000.0,
+        key=f"facility_{facility_idx}_production"
+    )
 
+    st.markdown("---")
+
+    # Data input method selection
+    st.write("**Emissions Input Method:**")
+    input_method = st.radio(
+        "Choose how to enter emission data:",
+        ["Annual Total (divided evenly by 12)", "Monthly Values (enter each month)"],
+        key=f"facility_{facility_idx}_input_method",
+        help="Annual: One value per scope divided by 12. Monthly: Actual monthly values per scope."
+    )
+
+    st.markdown("---")
+
+    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+    if input_method == "Annual Total (divided evenly by 12)":
+        st.write("**Annual Emissions Data (tCO2e/year):**")
+        st.info("ℹ️ Monthly charts will divide these values evenly by 12")
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            scope1 = st.number_input(
+                "Scope 1 - Direct (tCO2e/year)",
+                value=5000.0,
+                min_value=0.0,
+                step=100.0,
+                key=f"facility_{facility_idx}_scope1_annual",
+                help="Direct emissions from owned/controlled sources"
+            )
+
+        with col2:
+            scope2 = st.number_input(
+                "Scope 2 - Energy (tCO2e/year)",
+                value=3000.0,
+                min_value=0.0,
+                step=100.0,
+                key=f"facility_{facility_idx}_scope2_annual",
+                help="Emissions from purchased electricity, steam, heat, cooling"
+            )
+
+        with col3:
+            scope3 = st.number_input(
+                "Scope 3 - Indirect (tCO2e/year)",
+                value=2000.0,
+                min_value=0.0,
+                step=100.0,
+                key=f"facility_{facility_idx}_scope3_annual",
+                help="Other indirect emissions in value chain"
+            )
+
+        # Store as annual
+        facility_data = {
+            'idx': facility_idx,
+            'name': facility_name,
+            'scope1': scope1,
+            'scope2': scope2,
+            'scope3': scope3,
+            'production': production,
+            'total': scope1 + scope2 + scope3,
+            'intensity': (scope1 + scope2 + scope3) / production if production > 0 else 0,
+            'input_method': 'annual'
+        }
+
+    else:  # Monthly input
+        st.write("**Monthly Emissions Data (tCO2e/month):**")
+
+        # Scope 1 Monthly
+        with st.expander("📊 Scope 1 - Direct Emissions (Monthly)", expanded=True):
+            scope1_monthly = {}
+            for row_idx in range(4):
+                cols = st.columns(3)
+                for col_idx in range(3):
+                    month_idx = row_idx * 3 + col_idx
+                    month = months[month_idx]
+                    with cols[col_idx]:
+                        scope1_monthly[month] = st.number_input(
+                            month,
+                            value=400.0,
+                            min_value=0.0,
+                            step=10.0,
+                            key=f"facility_{facility_idx}_scope1_{month}",
+                            label_visibility="visible"
+                        )
+            scope1 = sum(scope1_monthly.values())
+            st.write(f"**Scope 1 Annual Total: {scope1:,.2f} tCO2e**")
+
+        # Scope 2 Monthly
+        with st.expander("📊 Scope 2 - Energy Emissions (Monthly)", expanded=False):
+            scope2_monthly = {}
+            for row_idx in range(4):
+                cols = st.columns(3)
+                for col_idx in range(3):
+                    month_idx = row_idx * 3 + col_idx
+                    month = months[month_idx]
+                    with cols[col_idx]:
+                        scope2_monthly[month] = st.number_input(
+                            month,
+                            value=250.0,
+                            min_value=0.0,
+                            step=10.0,
+                            key=f"facility_{facility_idx}_scope2_{month}",
+                            label_visibility="visible"
+                        )
+            scope2 = sum(scope2_monthly.values())
+            st.write(f"**Scope 2 Annual Total: {scope2:,.2f} tCO2e**")
+
+        # Scope 3 Monthly
+        with st.expander("📊 Scope 3 - Indirect Emissions (Monthly)", expanded=False):
+            scope3_monthly = {}
+            for row_idx in range(4):
+                cols = st.columns(3)
+                for col_idx in range(3):
+                    month_idx = row_idx * 3 + col_idx
+                    month = months[month_idx]
+                    with cols[col_idx]:
+                        scope3_monthly[month] = st.number_input(
+                            month,
+                            value=165.0,
+                            min_value=0.0,
+                            step=10.0,
+                            key=f"facility_{facility_idx}_scope3_{month}",
+                            label_visibility="visible"
+                        )
+            scope3 = sum(scope3_monthly.values())
+            st.write(f"**Scope 3 Annual Total: {scope3:,.2f} tCO2e**")
+
+        # Store with monthly data
+        facility_data = {
+            'idx': facility_idx,
+            'name': facility_name,
+            'scope1': scope1,
+            'scope2': scope2,
+            'scope3': scope3,
+            'scope1_monthly': scope1_monthly,
+            'scope2_monthly': scope2_monthly,
+            'scope3_monthly': scope3_monthly,
+            'production': production,
+            'total': scope1 + scope2 + scope3,
+            'intensity': (scope1 + scope2 + scope3) / production if production > 0 else 0,
+            'input_method': 'monthly'
+        }
+
+    # Summary metrics
+    st.markdown("---")
     col1, col2 = st.columns(2)
-
     with col1:
-        # Production data
-        production = st.number_input(
-            "Production (barrels or units/year)",
-            value=100000.0,
-            min_value=0.0,
-            step=10000.0,
-            key=f"facility_{facility_idx}_production"
-        )
-
-        # Scope 1 emissions
-        scope1 = st.number_input(
-            "Scope 1 - Direct Emissions (tCO2e/year)",
-            value=5000.0,
-            min_value=0.0,
-            step=100.0,
-            key=f"facility_{facility_idx}_scope1",
-            help="Direct emissions from owned/controlled sources"
-        )
-
-        # Scope 2 emissions
-        scope2 = st.number_input(
-            "Scope 2 - Energy Emissions (tCO2e/year)",
-            value=3000.0,
-            min_value=0.0,
-            step=100.0,
-            key=f"facility_{facility_idx}_scope2",
-            help="Emissions from purchased electricity, steam, heat, cooling"
-        )
-
+        st.metric("Total Annual Emissions", f"{facility_data['total']:,.0f} tCO2e")
     with col2:
-        # Scope 3 emissions
-        scope3 = st.number_input(
-            "Scope 3 - Indirect Emissions (tCO2e/year)",
-            value=2000.0,
-            min_value=0.0,
-            step=100.0,
-            key=f"facility_{facility_idx}_scope3",
-            help="Other indirect emissions in value chain"
-        )
-
-        # Energy intensity
-        total_emissions = scope1 + scope2 + scope3
-        if production > 0:
-            energy_intensity = total_emissions / production
-        else:
-            energy_intensity = 0
-
-        st.metric("Total Emissions", f"{total_emissions:,.0f} tCO2e")
-        st.metric("Energy Intensity", f"{energy_intensity:.4f} tCO2e/unit")
-
-    # Store facility data
-    facility_data = {
-        'idx': facility_idx,
-        'name': facility_name,
-        'scope1': scope1,
-        'scope2': scope2,
-        'scope3': scope3,
-        'production': production,
-        'total': total_emissions,
-        'intensity': energy_intensity
-    }
+        st.metric("Energy Intensity", f"{facility_data['intensity']:.4f} tCO2e/unit")
 
     # Update session state
     if len(st.session_state.facilities_data) <= facility_idx:
@@ -484,7 +578,10 @@ def create_manual_dataset_from_facilities():
         return False
 
 def generate_data_from_facilities(facilities):
-    """Generate data structure from real facility inputs - NO FAKE DATA"""
+    """Generate data structure from real facility inputs - NO FAKE DATA
+
+    Handles both annual and monthly input methods per facility
+    """
     data = {
         'scope1': [],
         'scope2': [],
@@ -503,14 +600,32 @@ def generate_data_from_facilities(facilities):
     scope3_total = sum([f['scope3'] for f in facilities])
     grand_total = scope1_total + scope2_total + scope3_total
 
-    # Create scope emission entries (aggregated across all facilities)
-    # Distribute evenly across months (user entered annual totals)
+    # Aggregate monthly data from all facilities
+    scope1_monthly_totals = {month: 0 for month in months}
+    scope2_monthly_totals = {month: 0 for month in months}
+    scope3_monthly_totals = {month: 0 for month in months}
+
+    for facility in facilities:
+        if facility.get('input_method') == 'monthly':
+            # Use actual monthly values
+            for month in months:
+                scope1_monthly_totals[month] += facility.get('scope1_monthly', {}).get(month, 0)
+                scope2_monthly_totals[month] += facility.get('scope2_monthly', {}).get(month, 0)
+                scope3_monthly_totals[month] += facility.get('scope3_monthly', {}).get(month, 0)
+        else:
+            # Distribute annual evenly across months
+            for month in months:
+                scope1_monthly_totals[month] += facility['scope1'] / 12
+                scope2_monthly_totals[month] += facility['scope2'] / 12
+                scope3_monthly_totals[month] += facility['scope3'] / 12
+
+    # Create scope emission entries with aggregated monthly data
     if scope1_total > 0:
         data['scope1'].append({
             'Source': 'Aggregated Direct Emissions',
             'Annual_Total': scope1_total,
             'Percentage': 100.0,
-            **{month: scope1_total / 12 for month in months}
+            **scope1_monthly_totals
         })
 
     if scope2_total > 0:
@@ -518,7 +633,7 @@ def generate_data_from_facilities(facilities):
             'Source': 'Aggregated Energy Emissions',
             'Annual_Total': scope2_total,
             'Percentage': 100.0,
-            **{month: scope2_total / 12 for month in months}
+            **scope2_monthly_totals
         })
 
     if scope3_total > 0:
@@ -526,7 +641,7 @@ def generate_data_from_facilities(facilities):
             'Source': 'Aggregated Indirect Emissions',
             'Annual_Total': scope3_total,
             'Percentage': 100.0,
-            **{month: scope3_total / 12 for month in months}
+            **scope3_monthly_totals
         })
 
     # Create facility breakdown with REAL user input data
