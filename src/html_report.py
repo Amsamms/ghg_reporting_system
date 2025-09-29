@@ -9,13 +9,18 @@ class HTMLReportGenerator:
     def __init__(self, report_generator):
         self.report_gen = report_generator
 
-    def generate_html_report(self, output_path):
-        """Generate interactive HTML report"""
+    def generate_html_report(self, output_path, facility_filter=None):
+        """Generate interactive HTML report
+
+        Args:
+            output_path: Path to save HTML file
+            facility_filter: Optional facility name to filter data
+        """
         try:
-            # Get all charts and data
-            charts = self._generate_all_charts()
+            # Get all charts and data with facility filtering
+            charts = self._generate_all_charts(facility_filter)
             recommendations = self.report_gen.generate_recommendations()
-            summary_stats = self.report_gen.get_summary_statistics()
+            summary_stats = self.report_gen.get_summary_statistics(facility_filter)
 
             # Create HTML template
             html_template = self._create_html_template()
@@ -38,34 +43,43 @@ class HTMLReportGenerator:
             print(f"Error generating HTML report: {e}")
             return False
 
-    def _generate_all_charts(self):
-        """Generate all charts as HTML divs"""
+    def _generate_all_charts(self, facility_filter=None):
+        """Generate all charts as HTML divs
+
+        Args:
+            facility_filter: Optional facility name to filter data
+        """
         charts = {}
 
         # Scope comparison chart
-        scope_chart = self.report_gen.create_scope_comparison_chart()
+        scope_chart = self.report_gen.create_scope_comparison_chart(facility_filter)
         if scope_chart:
-            charts['scope_comparison'] = plotly.io.to_html(scope_chart, include_plotlyjs=False, div_id="scope-comparison-chart")
+            charts['scope_comparison'] = plotly.io.to_html(scope_chart, include_plotlyjs=False, div_id="scope-comparison-chart", config={'displayModeBar': True})
 
         # Monthly trend chart
-        trend_chart = self.report_gen.create_monthly_trend_chart()
+        trend_chart = self.report_gen.create_monthly_trend_chart(facility_filter)
         if trend_chart:
-            charts['monthly_trend'] = plotly.io.to_html(trend_chart, include_plotlyjs=False, div_id="monthly-trend-chart")
+            charts['monthly_trend'] = plotly.io.to_html(trend_chart, include_plotlyjs=False, div_id="monthly-trend-chart", config={'displayModeBar': True})
 
-        # Sankey diagram
-        sankey_chart = self.report_gen.create_sankey_diagram()
+        # Sankey diagram - with proper configuration for better rendering
+        sankey_chart = self.report_gen.create_sankey_diagram(facility_filter)
         if sankey_chart:
-            charts['sankey'] = plotly.io.to_html(sankey_chart, include_plotlyjs=False, div_id="sankey-chart")
+            charts['sankey'] = plotly.io.to_html(
+                sankey_chart,
+                include_plotlyjs=False,
+                div_id="sankey-chart",
+                config={'displayModeBar': True, 'responsive': True}
+            )
 
         # Facility breakdown
         facility_chart = self.report_gen.create_facility_breakdown_chart()
         if facility_chart:
-            charts['facility_breakdown'] = plotly.io.to_html(facility_chart, include_plotlyjs=False, div_id="facility-chart")
+            charts['facility_breakdown'] = plotly.io.to_html(facility_chart, include_plotlyjs=False, div_id="facility-chart", config={'displayModeBar': True})
 
         # Energy consumption
         energy_chart = self.report_gen.create_energy_consumption_chart()
         if energy_chart:
-            charts['energy_consumption'] = plotly.io.to_html(energy_chart, include_plotlyjs=False, div_id="energy-chart")
+            charts['energy_consumption'] = plotly.io.to_html(energy_chart, include_plotlyjs=False, div_id="energy-chart", config={'displayModeBar': True})
 
         return charts
 

@@ -22,25 +22,47 @@ class GHGReportGenerator:
             print(f"Error loading Excel file: {e}")
             return None
 
-    def create_sankey_diagram(self):
-        """Create Sankey diagram for GHG emissions flow"""
+    def create_sankey_diagram(self, facility_filter=None):
+        """Create Sankey diagram for GHG emissions flow
+
+        Args:
+            facility_filter: Optional facility name to filter data
+        """
         if not self.data:
             return None
 
         try:
+            # Get summary stats which handles facility filtering
+            summary = self.get_summary_statistics(facility_filter)
+
             # Get scope totals from dashboard or calculate
             scope1_df = self.data.get('Scope 1 Emissions', pd.DataFrame())
             scope2_df = self.data.get('Scope 2 Emissions', pd.DataFrame())
             scope3_df = self.data.get('Scope 3 Emissions', pd.DataFrame())
 
+            # Calculate facility ratio if filtering
+            facility_ratio = 1.0
+            if facility_filter:
+                facilities_df = self.data.get('Facility Breakdown', pd.DataFrame())
+                if not facilities_df.empty and 'Facility' in facilities_df.columns:
+                    facility_row = facilities_df[facilities_df['Facility'] == facility_filter]
+                    if not facility_row.empty:
+                        total_all_facilities = (facilities_df['Scope_1'].sum() +
+                                                facilities_df['Scope_2'].sum() +
+                                                facilities_df['Scope_3'].sum())
+                        facility_emissions = (facility_row['Scope_1'].iloc[0] +
+                                            facility_row['Scope_2'].iloc[0] +
+                                            facility_row['Scope_3'].iloc[0])
+                        facility_ratio = facility_emissions / total_all_facilities if total_all_facilities > 0 else 0
+
             # Check if any data exists
             if scope1_df.empty and scope2_df.empty and scope3_df.empty:
                 return None
 
-            # Calculate totals (handle empty dataframes)
-            scope1_total = scope1_df['Annual_Total'].sum() if not scope1_df.empty and 'Annual_Total' in scope1_df.columns else 0
-            scope2_total = scope2_df['Annual_Total'].sum() if not scope2_df.empty and 'Annual_Total' in scope2_df.columns else 0
-            scope3_total = scope3_df['Annual_Total'].sum() if not scope3_df.empty and 'Annual_Total' in scope3_df.columns else 0
+            # Calculate totals with facility filtering
+            scope1_total = summary.get('scope1_total', 0)
+            scope2_total = summary.get('scope2_total', 0)
+            scope3_total = summary.get('scope3_total', 0)
 
             # Only proceed if we have some emissions data
             if scope1_total == 0 and scope2_total == 0 and scope3_total == 0:
@@ -53,29 +75,42 @@ class GHGReportGenerator:
             # Add emission sources first (left side)
             source_index = 0
 
-            # Add scope 1 sources
+            # Add scope 1 sources - Top 3, with larger, more readable labels
             top_scope1 = scope1_df.nlargest(3, 'Annual_Total') if not scope1_df.empty and 'Annual_Total' in scope1_df.columns else pd.DataFrame()
             for _, row in top_scope1.iterrows():
                 if 'Source' in row and row['Annual_Total'] > 0:
-                    source_name = f"S1: {row['Source'][:15]}..."
+                    # More readable labels - show full name if short, otherwise truncate smartly
+                    source_text = str(row['Source'])
+                    if len(source_text) > 20:
+                        source_name = source_text[:20] + "..."
+                    else:
+                        source_name = source_text
                     labels.append(source_name)
                     node_indices[f"scope1_{row['Source']}"] = source_index
                     source_index += 1
 
-            # Add scope 2 sources
+            # Add scope 2 sources - Top 2
             top_scope2 = scope2_df.nlargest(2, 'Annual_Total') if not scope2_df.empty and 'Annual_Total' in scope2_df.columns else pd.DataFrame()
             for _, row in top_scope2.iterrows():
                 if 'Source' in row and row['Annual_Total'] > 0:
-                    source_name = f"S2: {row['Source'][:15]}..."
+                    source_text = str(row['Source'])
+                    if len(source_text) > 20:
+                        source_name = source_text[:20] + "..."
+                    else:
+                        source_name = source_text
                     labels.append(source_name)
                     node_indices[f"scope2_{row['Source']}"] = source_index
                     source_index += 1
 
-            # Add scope 3 sources
+            # Add scope 3 sources - Top 3
             top_scope3 = scope3_df.nlargest(3, 'Annual_Total') if not scope3_df.empty and 'Annual_Total' in scope3_df.columns else pd.DataFrame()
             for _, row in top_scope3.iterrows():
                 if 'Source' in row and row['Annual_Total'] > 0:
-                    source_name = f"S3: {row['Source'][:15]}..."
+                    source_text = str(row['Source'])
+                    if len(source_text) > 20:
+                        source_name = source_text[:20] + "..."
+                    else:
+                        source_name = source_text
                     labels.append(source_name)
                     node_indices[f"scope3_{row['Source']}"] = source_index
                     source_index += 1
@@ -83,17 +118,17 @@ class GHGReportGenerator:
             # Add scope categories (middle)
             scope_start_index = len(labels)
             if scope1_total > 0:
-                labels.append('Scope 1\n(Direct)')
+                labels.append('Scope 1<br>(Direct)')
                 node_indices['scope1'] = len(labels) - 1
             if scope2_total > 0:
-                labels.append('Scope 2\n(Energy)')
+                labels.append('Scope 2<br>(Energy)')
                 node_indices['scope2'] = len(labels) - 1
             if scope3_total > 0:
-                labels.append('Scope 3\n(Other Indirect)')
+                labels.append('Scope 3<br>(Indirect)')
                 node_indices['scope3'] = len(labels) - 1
 
             # Add total (right side)
-            labels.append('Total GHG\nEmissions')
+            labels.append('Total GHG<br>Emissions')
             total_index = len(labels) - 1
 
             # Create links (source -> scope -> total)
@@ -101,14 +136,14 @@ class GHGReportGenerator:
             target = []
             value = []
 
-            # Links from emission sources to scopes
+            # Links from emission sources to scopes (apply facility ratio)
             for _, row in top_scope1.iterrows():
                 if 'Source' in row and row['Annual_Total'] > 0 and 'scope1' in node_indices:
                     source_key = f"scope1_{row['Source']}"
                     if source_key in node_indices:
                         source.append(node_indices[source_key])
                         target.append(node_indices['scope1'])
-                        value.append(row['Annual_Total'])
+                        value.append(row['Annual_Total'] * facility_ratio)
 
             for _, row in top_scope2.iterrows():
                 if 'Source' in row and row['Annual_Total'] > 0 and 'scope2' in node_indices:
@@ -116,7 +151,7 @@ class GHGReportGenerator:
                     if source_key in node_indices:
                         source.append(node_indices[source_key])
                         target.append(node_indices['scope2'])
-                        value.append(row['Annual_Total'])
+                        value.append(row['Annual_Total'] * facility_ratio)
 
             for _, row in top_scope3.iterrows():
                 if 'Source' in row and row['Annual_Total'] > 0 and 'scope3' in node_indices:
@@ -124,7 +159,7 @@ class GHGReportGenerator:
                     if source_key in node_indices:
                         source.append(node_indices[source_key])
                         target.append(node_indices['scope3'])
-                        value.append(row['Annual_Total'])
+                        value.append(row['Annual_Total'] * facility_ratio)
 
             # Links from scopes to total
             if scope1_total > 0 and 'scope1' in node_indices:
@@ -178,28 +213,33 @@ class GHGReportGenerator:
 
             fig = go.Figure(data=[go.Sankey(
                 node=dict(
-                    pad=15,
-                    thickness=20,
+                    pad=20,
+                    thickness=25,
                     line=dict(color="white", width=2),
                     label=labels,
                     color=node_colors,
                     x=[0.01] * (scope_start_index) + [0.5] * (total_index - scope_start_index) + [0.99],  # Position nodes
-                    y=[i/(scope_start_index) for i in range(scope_start_index)] +
-                      [0.2, 0.5, 0.8] + [0.5]  # Spread sources vertically, center scopes and total
+                    y=[i/(scope_start_index) if scope_start_index > 0 else 0 for i in range(scope_start_index)] +
+                      [0.2, 0.5, 0.8][:total_index - scope_start_index] + [0.5]  # Spread sources vertically
                 ),
                 link=dict(
                     source=source,
                     target=target,
                     value=value,
                     color=link_colors
-                )
+                ),
+                textfont=dict(color="black", size=14, family="Arial")
             )])
 
+            title = f"GHG Emissions Flow - {summary.get('facility_name', 'All Facilities')}"
+
             fig.update_layout(
-                title_text="GHG Emissions Flow (Sankey Diagram)",
-                font_size=10,
-                height=600,
-                margin=dict(t=80, l=10, r=10, b=50)
+                title_text=title,
+                font=dict(size=14, family="Arial", color="black"),
+                height=700,
+                margin=dict(t=100, l=20, r=20, b=50),
+                paper_bgcolor='white',
+                plot_bgcolor='white'
             )
 
             return fig
@@ -209,19 +249,22 @@ class GHGReportGenerator:
             print(f"Detailed error: {traceback.format_exc()}")
             return None
 
-    def create_scope_comparison_chart(self):
-        """Create bar chart comparing the three scopes"""
+    def create_scope_comparison_chart(self, facility_filter=None):
+        """Create bar chart comparing the three scopes
+
+        Args:
+            facility_filter: Optional facility name to filter data
+        """
         if not self.data:
             return None
 
         try:
-            scope1_df = self.data.get('Scope 1 Emissions', pd.DataFrame())
-            scope2_df = self.data.get('Scope 2 Emissions', pd.DataFrame())
-            scope3_df = self.data.get('Scope 3 Emissions', pd.DataFrame())
+            # Get summary stats which handles facility filtering
+            summary = self.get_summary_statistics(facility_filter)
 
-            scope1_total = scope1_df['Annual_Total'].sum() if not scope1_df.empty and 'Annual_Total' in scope1_df.columns else 0
-            scope2_total = scope2_df['Annual_Total'].sum() if not scope2_df.empty and 'Annual_Total' in scope2_df.columns else 0
-            scope3_total = scope3_df['Annual_Total'].sum() if not scope3_df.empty and 'Annual_Total' in scope3_df.columns else 0
+            scope1_total = summary.get('scope1_total', 0)
+            scope2_total = summary.get('scope2_total', 0)
+            scope3_total = summary.get('scope3_total', 0)
 
             scopes = ['Scope 1\n(Direct)', 'Scope 2\n(Energy)', 'Scope 3\n(Other Indirect)']
             values = [scope1_total, scope2_total, scope3_total]
@@ -229,14 +272,16 @@ class GHGReportGenerator:
 
             fig = go.Figure(data=[
                 go.Bar(x=scopes, y=values, marker_color=colors,
-                       text=[f'{v:,.0f} tCO₂e' for v in values],
+                       text=[f'{v:,.0f} tCO2e' for v in values],
                        textposition='auto')
             ])
 
+            title = f'GHG Emissions by Scope - {summary.get("facility_name", "All Facilities")}'
+
             fig.update_layout(
-                title='GHG Emissions by Scope',
+                title=title,
                 xaxis_title='Emission Scopes',
-                yaxis_title='Emissions (tCO₂e)',
+                yaxis_title='Emissions (tCO2e)',
                 showlegend=False,
                 height=500
             )
@@ -246,8 +291,12 @@ class GHGReportGenerator:
             print(f"Error creating scope comparison chart: {e}")
             return None
 
-    def create_monthly_trend_chart(self):
-        """Create monthly trend chart for all scopes"""
+    def create_monthly_trend_chart(self, facility_filter=None):
+        """Create monthly trend chart for all scopes
+
+        Args:
+            facility_filter: Optional facility name to filter data
+        """
         if not self.data:
             return None
 
@@ -266,12 +315,30 @@ class GHGReportGenerator:
 
             colors = ['#FF6B6B', '#4ECDC4', '#45B7D1']
 
+            # If facility filter, we need to proportion the data
+            # Since scopes don't have per-facility breakdown, we proportion based on facility's share
+            facility_ratio = 1.0
+            if facility_filter:
+                facilities_df = self.data.get('Facility Breakdown', pd.DataFrame())
+                if not facilities_df.empty and 'Facility' in facilities_df.columns:
+                    facility_row = facilities_df[facilities_df['Facility'] == facility_filter]
+                    if not facility_row.empty:
+                        # Calculate facility's proportion of total emissions
+                        total_all_facilities = (facilities_df['Scope_1'].sum() +
+                                                facilities_df['Scope_2'].sum() +
+                                                facilities_df['Scope_3'].sum())
+                        facility_emissions = (facility_row['Scope_1'].iloc[0] +
+                                            facility_row['Scope_2'].iloc[0] +
+                                            facility_row['Scope_3'].iloc[0])
+                        facility_ratio = facility_emissions / total_all_facilities if total_all_facilities > 0 else 0
+
             for i, (scope_name, df) in enumerate(scope_dfs.items()):
                 if not df.empty:
                     monthly_totals = []
                     for month in months:
                         if month in df.columns:
-                            monthly_totals.append(df[month].sum())
+                            monthly_total = df[month].sum() * facility_ratio
+                            monthly_totals.append(monthly_total)
                         else:
                             monthly_totals.append(0)
 
@@ -284,10 +351,13 @@ class GHGReportGenerator:
                         marker=dict(size=8)
                     ))
 
+            summary = self.get_summary_statistics(facility_filter)
+            title = f'Monthly GHG Emissions Trend by Scope - {summary.get("facility_name", "All Facilities")}'
+
             fig.update_layout(
-                title='Monthly GHG Emissions Trend by Scope',
+                title=title,
                 xaxis_title='Month',
-                yaxis_title='Emissions (tCO₂e)',
+                yaxis_title='Emissions (tCO2e)',
                 height=500,
                 hovermode='x unified'
             )
@@ -530,8 +600,12 @@ class GHGReportGenerator:
 
         return recommendations
 
-    def get_summary_statistics(self):
-        """Generate summary statistics for the report"""
+    def get_summary_statistics(self, facility_filter=None):
+        """Generate summary statistics for the report
+
+        Args:
+            facility_filter: Optional facility name to filter data for single facility
+        """
         if not self.data:
             return {}
 
@@ -541,9 +615,22 @@ class GHGReportGenerator:
             scope3_df = self.data.get('Scope 3 Emissions', pd.DataFrame())
             facilities_df = self.data.get('Facility Breakdown', pd.DataFrame())
 
-            scope1_total = scope1_df['Annual_Total'].sum() if not scope1_df.empty and 'Annual_Total' in scope1_df.columns else 0
-            scope2_total = scope2_df['Annual_Total'].sum() if not scope2_df.empty and 'Annual_Total' in scope2_df.columns else 0
-            scope3_total = scope3_df['Annual_Total'].sum() if not scope3_df.empty and 'Annual_Total' in scope3_df.columns else 0
+            # If facility filter is specified, get emissions for that facility only
+            if facility_filter and not facilities_df.empty and 'Facility' in facilities_df.columns:
+                facility_row = facilities_df[facilities_df['Facility'] == facility_filter]
+                if not facility_row.empty:
+                    scope1_total = facility_row['Scope_1'].iloc[0] if 'Scope_1' in facility_row.columns else 0
+                    scope2_total = facility_row['Scope_2'].iloc[0] if 'Scope_2' in facility_row.columns else 0
+                    scope3_total = facility_row['Scope_3'].iloc[0] if 'Scope_3' in facility_row.columns else 0
+                    total_production = facility_row['Production'].iloc[0] if 'Production' in facility_row.columns else 1
+                else:
+                    scope1_total = scope2_total = scope3_total = total_production = 0
+            else:
+                # All facilities combined
+                scope1_total = scope1_df['Annual_Total'].sum() if not scope1_df.empty and 'Annual_Total' in scope1_df.columns else 0
+                scope2_total = scope2_df['Annual_Total'].sum() if not scope2_df.empty and 'Annual_Total' in scope2_df.columns else 0
+                scope3_total = scope3_df['Annual_Total'].sum() if not scope3_df.empty and 'Annual_Total' in scope3_df.columns else 0
+                total_production = facilities_df['Production'].sum() if not facilities_df.empty and 'Production' in facilities_df.columns else 1
 
             total_emissions = scope1_total + scope2_total + scope3_total
 
@@ -555,7 +642,6 @@ class GHGReportGenerator:
             }
 
             # Production-based metrics
-            total_production = facilities_df['Production'].sum() if not facilities_df.empty and 'Production' in facilities_df.columns else 1
             carbon_intensity = total_emissions / total_production if total_production > 0 else 0
 
             return {
@@ -564,8 +650,9 @@ class GHGReportGenerator:
                 'scope2_total': scope2_total,
                 'scope3_total': scope3_total,
                 'carbon_intensity': carbon_intensity,
-                'total_facilities': len(facilities_df) if not facilities_df.empty else 0,
+                'total_facilities': 1 if facility_filter else (len(facilities_df) if not facilities_df.empty else 0),
                 'report_date': self.report_date,
+                'facility_name': facility_filter if facility_filter else 'All Facilities',
                 **scope_percentages
             }
         except Exception as e:

@@ -104,6 +104,8 @@ def main():
         st.session_state.ghg_data = None
     if 'company_info' not in st.session_state:
         st.session_state.company_info = {}
+    if 'selected_facility' not in st.session_state:
+        st.session_state.selected_facility = 'All Facilities'
 
     # Page routing
     if page == "🏠 Home":
@@ -389,27 +391,76 @@ def add_emission_sources(scope, default_sources):
         if custom_source and custom_source not in selected_sources:
             selected_sources.append(custom_source)
 
-    # Annual emissions input for each source
+    # Data input method selection
     if selected_sources:
-        st.write(f"**Enter annual emissions for {scope.upper()} sources (tCO₂e):**")
+        st.markdown(f"---")
+        st.write(f"**Data Input Method for {scope.upper()}:**")
+
+        input_method = st.radio(
+            "Choose how to enter emission data:",
+            ["Annual Total (distributed evenly across months)", "Monthly Values (enter each month separately)"],
+            key=f"{scope}_input_method",
+            help="Annual: Enter one value that will be divided by 12 for monthly charts. Monthly: Enter actual values for each month."
+        )
 
         sources_data = []
-        for source in selected_sources:
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                st.write(source)
-            with col2:
-                annual_total = st.number_input(
-                    "tCO₂e",
-                    value=1000.0,
-                    min_value=0.0,
-                    step=100.0,
-                    key=f"{scope}_{source}_annual",
-                    label_visibility="collapsed"
-                )
+
+        if input_method == "Annual Total (distributed evenly across months)":
+            st.write(f"**Enter annual emissions for {scope.upper()} sources (tCO2e):**")
+            st.info("ℹ️ Monthly charts will show this annual value divided evenly across 12 months")
+
+            for source in selected_sources:
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.write(source)
+                with col2:
+                    annual_total = st.number_input(
+                        "tCO2e/year",
+                        value=1000.0,
+                        min_value=0.0,
+                        step=100.0,
+                        key=f"{scope}_{source}_annual",
+                        label_visibility="collapsed"
+                    )
+                    sources_data.append({
+                        'Source': source,
+                        'Annual_Total': annual_total,
+                        'input_method': 'annual'
+                    })
+
+        else:  # Monthly Values
+            st.write(f"**Enter monthly emissions for {scope.upper()} sources (tCO2e/month):**")
+
+            for source in selected_sources:
+                st.write(f"**{source}**")
+                months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+                # Create 4 rows of 3 months each
+                monthly_values = {}
+                for row_idx in range(4):
+                    cols = st.columns(3)
+                    for col_idx in range(3):
+                        month_idx = row_idx * 3 + col_idx
+                        month = months[month_idx]
+                        with cols[col_idx]:
+                            monthly_values[month] = st.number_input(
+                                month,
+                                value=100.0,
+                                min_value=0.0,
+                                step=10.0,
+                                key=f"{scope}_{source}_{month}",
+                                label_visibility="visible"
+                            )
+
+                annual_total = sum(monthly_values.values())
+                st.write(f"Annual Total: {annual_total:,.2f} tCO2e")
+
                 sources_data.append({
                     'Source': source,
-                    'Annual_Total': annual_total
+                    'Annual_Total': annual_total,
+                    'input_method': 'monthly',
+                    'monthly_values': monthly_values
                 })
 
         st.session_state.emission_sources[scope] = sources_data
@@ -466,16 +517,22 @@ def generate_manual_data_structure():
         'totals': {}
     }
 
+    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
     # Process emission sources
     for scope in ['scope1', 'scope2', 'scope3']:
         scope_data = st.session_state.emission_sources.get(scope, [])
         for source_data in scope_data:
-            # Generate monthly data (distribute annual total across 12 months)
             annual_total = source_data['Annual_Total']
-            monthly_values = [annual_total / 12 + (annual_total * 0.1 * (i % 3 - 1)) for i in range(12)]
 
-            months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+            # Check if user provided monthly values or annual total
+            if source_data.get('input_method') == 'monthly' and 'monthly_values' in source_data:
+                # Use actual monthly values provided by user
+                monthly_values = [source_data['monthly_values'].get(month, 0) for month in months]
+            else:
+                # Distribute annual total evenly across 12 months
+                monthly_values = [annual_total / 12 for _ in range(12)]
 
             row = {
                 'Source': source_data['Source'],
@@ -574,20 +631,38 @@ def show_reports_page():
         """, unsafe_allow_html=True)
         return
 
-    # Show data summary
-    summary = st.session_state.ghg_data.get_summary_statistics()
+    # Facility filtering section
+    st.subheader("🏭 Facility Selection")
 
-    st.subheader("📈 Data Summary")
+    # Get list of facilities from data
+    facilities_df = st.session_state.ghg_data.data.get('Facility Breakdown', pd.DataFrame())
+    facility_options = ['All Facilities'] + list(facilities_df['Facility'].values) if not facilities_df.empty and 'Facility' in facilities_df.columns else ['All Facilities']
+
+    selected_facility = st.selectbox(
+        "Select facility to view:",
+        facility_options,
+        help="Choose 'All Facilities' for combined view or select a specific facility"
+    )
+
+    # Store selected facility in session state for report generation
+    st.session_state.selected_facility = selected_facility
+
+    st.markdown("---")
+
+    # Show data summary (filtered if specific facility selected)
+    summary = st.session_state.ghg_data.get_summary_statistics(selected_facility if selected_facility != 'All Facilities' else None)
+
+    st.subheader(f"📈 Data Summary - {selected_facility}")
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        st.metric("Total Emissions", f"{summary.get('total_emissions', 0):,.0f} tCO₂e")
+        st.metric("Total Emissions", f"{summary.get('total_emissions', 0):,.0f} tCO2e")
     with col2:
-        st.metric("Scope 1", f"{summary.get('scope1_total', 0):,.0f} tCO₂e")
+        st.metric("Scope 1", f"{summary.get('scope1_total', 0):,.0f} tCO2e")
     with col3:
-        st.metric("Scope 2", f"{summary.get('scope2_total', 0):,.0f} tCO₂e")
+        st.metric("Scope 2", f"{summary.get('scope2_total', 0):,.0f} tCO2e")
     with col4:
-        st.metric("Scope 3", f"{summary.get('scope3_total', 0):,.0f} tCO₂e")
+        st.metric("Scope 3", f"{summary.get('scope3_total', 0):,.0f} tCO2e")
 
     st.markdown("---")
 
@@ -598,18 +673,18 @@ def show_reports_page():
 
     with col1:
         # Scope comparison chart
-        scope_chart = st.session_state.ghg_data.create_scope_comparison_chart()
+        scope_chart = st.session_state.ghg_data.create_scope_comparison_chart(selected_facility if selected_facility != 'All Facilities' else None)
         if scope_chart:
             st.plotly_chart(scope_chart, use_container_width=True)
 
     with col2:
         # Monthly trend chart
-        trend_chart = st.session_state.ghg_data.create_monthly_trend_chart()
+        trend_chart = st.session_state.ghg_data.create_monthly_trend_chart(selected_facility if selected_facility != 'All Facilities' else None)
         if trend_chart:
             st.plotly_chart(trend_chart, use_container_width=True)
 
     # Sankey diagram
-    sankey_chart = st.session_state.ghg_data.create_sankey_diagram()
+    sankey_chart = st.session_state.ghg_data.create_sankey_diagram(selected_facility if selected_facility != 'All Facilities' else None)
     if sankey_chart:
         st.subheader("🔄 Emission Flow Analysis")
         st.plotly_chart(sankey_chart, use_container_width=True)
@@ -873,11 +948,16 @@ def generate_html_report():
 
         html_generator = HTMLReportGenerator(st.session_state.ghg_data)
 
+        # Get selected facility if available
+        facility_filter = None
+        if 'selected_facility' in st.session_state and st.session_state.selected_facility != 'All Facilities':
+            facility_filter = st.session_state.selected_facility
+
         # Create temporary file for HTML
         with tempfile.NamedTemporaryFile(delete=False, suffix='.html', mode='w') as tmp_file:
             tmp_path = tmp_file.name
 
-        if html_generator.generate_html_report(tmp_path):
+        if html_generator.generate_html_report(tmp_path, facility_filter):
             with open(tmp_path, 'r', encoding='utf-8') as f:
                 html_content = f.read()
 

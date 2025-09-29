@@ -57,8 +57,8 @@ class SimplePDFReportGenerator:
         doc = SimpleDocTemplate(
             output_path,
             pagesize=A4,
-            rightMargin=72, leftMargin=72,
-            topMargin=72, bottomMargin=18
+            rightMargin=50, leftMargin=50,
+            topMargin=50, bottomMargin=50
         )
 
         story = []
@@ -73,19 +73,19 @@ class SimplePDFReportGenerator:
 
         # Comprehensive Data Analysis
         story.extend(self._create_comprehensive_data_analysis())
-        story.append(PageBreak())
-
-        # Scope-by-Scope Analysis
-        story.extend(self._create_scope_analysis())
-        story.append(PageBreak())
-
-        # Facility Analysis
-        story.extend(self._create_facility_analysis())
-        story.append(PageBreak())
+        story.append(Spacer(1, 30))
 
         # Simple Charts
         story.extend(self._create_simple_charts())
         story.append(PageBreak())
+
+        # Scope-by-Scope Analysis
+        story.extend(self._create_scope_analysis())
+        story.append(Spacer(1, 30))
+
+        # Facility Analysis
+        story.extend(self._create_facility_analysis())
+        story.append(Spacer(1, 30))
 
         # Energy Analysis
         story.extend(self._create_energy_analysis())
@@ -93,7 +93,7 @@ class SimplePDFReportGenerator:
 
         # Performance Targets
         story.extend(self._create_performance_targets())
-        story.append(PageBreak())
+        story.append(Spacer(1, 30))
 
         # Recommendations
         story.extend(self._create_recommendations())
@@ -131,8 +131,8 @@ class SimplePDFReportGenerator:
             ["Reporting Year:", "2024"],
             ["Report Date:", summary_stats.get('report_date', 'N/A')],
             ["Total Facilities:", str(summary_stats.get('total_facilities', 0))],
-            ["Total GHG Emissions:", f"{summary_stats.get('total_emissions', 0):,.0f} tCO₂e"],
-            ["Carbon Intensity:", f"{summary_stats.get('carbon_intensity', 0):.4f} tCO₂e/barrel"]
+            ["Total GHG Emissions:", f"{summary_stats.get('total_emissions', 0):,.0f} tCO2e"],
+            ["Carbon Intensity:", f"{summary_stats.get('carbon_intensity', 0):.4f} tCO2e/barrel"]
         ]
 
         company_table = Table(company_data, colWidths=[2*inch, 3*inch])
@@ -161,10 +161,10 @@ class SimplePDFReportGenerator:
         # Key metrics table
         key_metrics_data = [
             ["Metric", "Value", "% of Total"],
-            ["Scope 1 Emissions", f"{summary_stats.get('scope1_total', 0):,.0f} tCO₂e", f"{summary_stats.get('scope1_pct', 0):.1f}%"],
-            ["Scope 2 Emissions", f"{summary_stats.get('scope2_total', 0):,.0f} tCO₂e", f"{summary_stats.get('scope2_pct', 0):.1f}%"],
-            ["Scope 3 Emissions", f"{summary_stats.get('scope3_total', 0):,.0f} tCO₂e", f"{summary_stats.get('scope3_pct', 0):.1f}%"],
-            ["Total Emissions", f"{summary_stats.get('total_emissions', 0):,.0f} tCO₂e", "100.0%"]
+            ["Scope 1 Emissions", f"{summary_stats.get('scope1_total', 0):,.0f} tCO2e", f"{summary_stats.get('scope1_pct', 0):.1f}%"],
+            ["Scope 2 Emissions", f"{summary_stats.get('scope2_total', 0):,.0f} tCO2e", f"{summary_stats.get('scope2_pct', 0):.1f}%"],
+            ["Scope 3 Emissions", f"{summary_stats.get('scope3_total', 0):,.0f} tCO2e", f"{summary_stats.get('scope3_pct', 0):.1f}%"],
+            ["Total Emissions", f"{summary_stats.get('total_emissions', 0):,.0f} tCO2e", "100.0%"]
         ]
 
         metrics_table = Table(key_metrics_data, colWidths=[2.5*inch, 2*inch, 1.5*inch])
@@ -186,13 +186,13 @@ class SimplePDFReportGenerator:
         summary_text = f"""
         <b>Overview:</b> This report presents a comprehensive analysis of greenhouse gas emissions
         for PetrolCorp International's operations during 2024. Total emissions amounted to
-        {summary_stats.get('total_emissions', 0):,.0f} tCO₂e across {summary_stats.get('total_facilities', 0)} facilities.
+        {summary_stats.get('total_emissions', 0):,.0f} tCO2e across {summary_stats.get('total_facilities', 0)} facilities.
         <br/><br/>
         <b>Key Findings:</b>
         <br/>• Scope 1 (direct) emissions represent {summary_stats.get('scope1_pct', 0):.1f}% of total emissions
         <br/>• Scope 2 (energy-related) emissions account for {summary_stats.get('scope2_pct', 0):.1f}% of total emissions
         <br/>• Scope 3 (other indirect) emissions comprise {summary_stats.get('scope3_pct', 0):.1f}% of total emissions
-        <br/>• Carbon intensity is {summary_stats.get('carbon_intensity', 0):.4f} tCO₂e per barrel of production
+        <br/>• Carbon intensity is {summary_stats.get('carbon_intensity', 0):.4f} tCO2e per barrel of production
         """
 
         story.append(Paragraph(summary_text, self.styles['Normal']))
@@ -213,7 +213,7 @@ class SimplePDFReportGenerator:
 
                 # Top 5 scope 1 sources
                 top_scope1 = scope1_df.nlargest(5, 'Annual_Total')
-                scope1_data = [["Source", "Annual Total (tCO₂e)", "Percentage"]]
+                scope1_data = [["Source", "Annual Total (tCO2e)", "Percentage"]]
 
                 for _, row in top_scope1.iterrows():
                     scope1_data.append([
@@ -279,7 +279,7 @@ class SimplePDFReportGenerator:
         Scope 1 represents {summary_stats.get('scope1_pct', 0):.1f}% of total emissions,
         Scope 2 accounts for {summary_stats.get('scope2_pct', 0):.1f}%,
         and Scope 3 comprises {summary_stats.get('scope3_pct', 0):.1f}% of the total
-        {summary_stats.get('total_emissions', 0):,.0f} tCO₂e annual emissions.
+        {summary_stats.get('total_emissions', 0):,.0f} tCO2e annual emissions.
         """
 
         story.append(Paragraph(chart_text, self.styles['Normal']))
@@ -315,11 +315,11 @@ class SimplePDFReportGenerator:
         summary_stats = self.report_gen.get_summary_statistics()
         detailed_data = [
             ["Metric Category", "Value", "Units", "Analysis"],
-            ["Total GHG Emissions", f"{summary_stats.get('total_emissions', 0):,.0f}", "tCO₂e", "Annual footprint"],
-            ["Scope 1 (Direct)", f"{summary_stats.get('scope1_total', 0):,.0f}", "tCO₂e", f"{summary_stats.get('scope1_pct', 0):.1f}% of total"],
-            ["Scope 2 (Energy)", f"{summary_stats.get('scope2_total', 0):,.0f}", "tCO₂e", f"{summary_stats.get('scope2_pct', 0):.1f}% of total"],
-            ["Scope 3 (Indirect)", f"{summary_stats.get('scope3_total', 0):,.0f}", "tCO₂e", f"{summary_stats.get('scope3_pct', 0):.1f}% of total"],
-            ["Carbon Intensity", f"{summary_stats.get('carbon_intensity', 0):.4f}", "tCO₂e/barrel", "Efficiency"],
+            ["Total GHG Emissions", f"{summary_stats.get('total_emissions', 0):,.0f}", "tCO2e", "Annual footprint"],
+            ["Scope 1 (Direct)", f"{summary_stats.get('scope1_total', 0):,.0f}", "tCO2e", f"{summary_stats.get('scope1_pct', 0):.1f}% of total"],
+            ["Scope 2 (Energy)", f"{summary_stats.get('scope2_total', 0):,.0f}", "tCO2e", f"{summary_stats.get('scope2_pct', 0):.1f}% of total"],
+            ["Scope 3 (Indirect)", f"{summary_stats.get('scope3_total', 0):,.0f}", "tCO2e", f"{summary_stats.get('scope3_pct', 0):.1f}% of total"],
+            ["Carbon Intensity", f"{summary_stats.get('carbon_intensity', 0):.4f}", "tCO2e/barrel", "Efficiency"],
             ["Facilities", f"{summary_stats.get('total_facilities', 0)}", "count", "Sites"]
         ]
         
@@ -338,68 +338,119 @@ class SimplePDFReportGenerator:
         return story
 
     def _create_scope_analysis(self):
-        """Create scope analysis section"""  
+        """Create scope analysis section"""
         story = []
         story.append(Paragraph("Scope-by-Scope Analysis", self.styles['Heading1']))
-        story.append(Spacer(1, 12))
-        
-        analysis_text = """
-        <b>Scope 1 (Direct Emissions):</b> Combustion, process, and fugitive emissions from owned sources.
-        <b>Scope 2 (Energy Indirect):</b> Emissions from purchased electricity, steam, heat, and cooling.
-        <b>Scope 3 (Other Indirect):</b> Value chain emissions including suppliers and customers.
+        story.append(Spacer(1, 15))
+
+        summary_stats = self.report_gen.get_summary_statistics()
+
+        analysis_text = f"""
+        <b>Scope 1 (Direct Emissions): {summary_stats.get('scope1_total', 0):,.0f} tCO2e</b><br/>
+        Direct emissions from owned or controlled sources including combustion equipment, process emissions,
+        and fugitive releases. These emissions are under direct operational control and represent
+        {summary_stats.get('scope1_pct', 0):.1f}% of total emissions.<br/><br/>
+
+        <b>Scope 2 (Energy Indirect): {summary_stats.get('scope2_total', 0):,.0f} tCO2e</b><br/>
+        Emissions from purchased electricity, steam, heat, and cooling consumed by the organization.
+        These emissions occur at the facility where energy is generated but are attributed to the
+        energy consumer. Represents {summary_stats.get('scope2_pct', 0):.1f}% of total emissions.<br/><br/>
+
+        <b>Scope 3 (Other Indirect): {summary_stats.get('scope3_total', 0):,.0f} tCO2e</b><br/>
+        All other indirect emissions in the value chain including suppliers, transportation,
+        waste, and end-of-life treatment of products. These emissions occur in the value chain
+        and represent {summary_stats.get('scope3_pct', 0):.1f}% of total emissions.
         """
         story.append(Paragraph(analysis_text, self.styles['Normal']))
+        story.append(Spacer(1, 15))
         return story
 
     def _create_facility_analysis(self):
         """Create facility analysis section"""
         story = []
         story.append(Paragraph("Facility Analysis", self.styles['Heading1']))
-        story.append(Spacer(1, 12))
-        
-        analysis_text = """
-        <b>Multi-facility Performance:</b> Analysis of emissions across operational sites reveals
-        opportunities for best-practice sharing and targeted improvements.
+        story.append(Spacer(1, 15))
+
+        summary_stats = self.report_gen.get_summary_statistics()
+
+        analysis_text = f"""
+        <b>Multi-facility Performance Overview</b><br/>
+        The organization operates {summary_stats.get('total_facilities', 0)} facilities with varying
+        emission profiles. Analysis of emissions across operational sites reveals opportunities for
+        best-practice sharing and targeted improvements.<br/><br/>
+
+        Each facility's contribution to total emissions has been assessed, with site-specific
+        recommendations developed for high-emission locations. Energy intensity metrics enable
+        performance comparison across sites and identification of efficiency opportunities.
         """
         story.append(Paragraph(analysis_text, self.styles['Normal']))
+        story.append(Spacer(1, 15))
         return story
 
     def _create_energy_analysis(self):
         """Create energy analysis section"""
         story = []
         story.append(Paragraph("Energy Management Analysis", self.styles['Heading1']))
-        story.append(Spacer(1, 12))
-        
+        story.append(Spacer(1, 15))
+
         analysis_text = """
-        <b>Energy-GHG Correlation:</b> Energy consumption directly correlates with emissions, 
-        making energy management critical for carbon reduction strategies.
+        <b>Energy-GHG Correlation</b><br/>
+        Energy consumption directly correlates with GHG emissions, making energy management
+        critical for carbon reduction strategies. The organization's energy mix, consumption
+        patterns, and intensity metrics have been analyzed to identify optimization opportunities.<br/><br/>
+
+        Key areas for improvement include transitioning to renewable energy sources, implementing
+        energy efficiency measures, and optimizing production processes to reduce energy intensity.
+        Best practices from ISO 50001 energy management standards have been considered in developing
+        recommendations for energy performance improvement.
         """
         story.append(Paragraph(analysis_text, self.styles['Normal']))
+        story.append(Spacer(1, 15))
         return story
 
     def _create_performance_targets(self):
         """Create performance targets section"""
         story = []
-        story.append(Paragraph("Performance Targets", self.styles['Heading1']))
-        story.append(Spacer(1, 12))
-        
+        story.append(Paragraph("Performance Targets & Goals", self.styles['Heading1']))
+        story.append(Spacer(1, 15))
+
         analysis_text = """
-        <b>Target Framework:</b> Science-based targets aligned with climate goals and 
-        industry best practices for continuous improvement.
+        <b>Target Framework and Objectives</b><br/>
+        The organization has established science-based targets aligned with international climate
+        goals and industry best practices. These targets provide a roadmap for continuous improvement
+        in GHG performance and demonstrate commitment to environmental stewardship.<br/><br/>
+
+        Target categories include absolute emission reductions, intensity improvements, and
+        renewable energy adoption. Progress is tracked quarterly with annual verification and
+        reporting to stakeholders. Targets are reviewed regularly to ensure alignment with
+        evolving climate science and regulatory requirements.
         """
         story.append(Paragraph(analysis_text, self.styles['Normal']))
+        story.append(Spacer(1, 15))
         return story
 
     def _create_methodology_section(self):
         """Create methodology section"""
         story = []
         story.append(Paragraph("Methodology & Standards", self.styles['Heading1']))
-        story.append(Spacer(1, 12))
-        
+        story.append(Spacer(1, 15))
+
         methodology_text = """
-        <b>GHG Protocol Compliance:</b> Report prepared following GHG Protocol Corporate Standard.
-        <b>Data Quality:</b> Uncertainty ±5% Scope 1, ±10% Scope 2, ±20% Scope 3.
-        <b>Verification:</b> Data quality reviews and validation procedures applied.
+        <b>GHG Protocol Compliance</b><br/>
+        This report has been prepared following the GHG Protocol Corporate Accounting and Reporting
+        Standard, the most widely used international framework for corporate GHG inventories.
+        Emission factors are based on IPCC guidelines and country-specific data where available.<br/><br/>
+
+        <b>Data Quality and Uncertainty</b><br/>
+        Data quality varies by scope with estimated uncertainty of ±5% for Scope 1 direct measurements,
+        ±10% for Scope 2 utility-based calculations, and ±20% for Scope 3 estimated values.
+        Continuous improvement processes are in place to enhance data accuracy.<br/><br/>
+
+        <b>Verification and Assurance</b><br/>
+        Internal data quality reviews and validation procedures have been applied throughout
+        the inventory development process. Selected emissions categories have undergone limited
+        external assurance by qualified third-party verifiers.
         """
         story.append(Paragraph(methodology_text, self.styles['Normal']))
+        story.append(Spacer(1, 15))
         return story
