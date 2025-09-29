@@ -270,13 +270,13 @@ def show_upload_page():
                         st.write(f"• {sheet_name}: {len(df)} rows, {len(df.columns)} columns")
 
                 with col2:
-                    # Show summary statistics
-                    summary = report_gen.get_summary_statistics()
+                    # Show summary statistics (no facility filter for upload preview)
+                    summary = report_gen.get_summary_statistics(facility_filter=None)
                     st.write("**Summary Statistics:**")
-                    st.write(f"• Total Emissions: {summary.get('total_emissions', 0):,.0f} tCO₂e")
-                    st.write(f"• Scope 1: {summary.get('scope1_total', 0):,.0f} tCO₂e")
-                    st.write(f"• Scope 2: {summary.get('scope2_total', 0):,.0f} tCO₂e")
-                    st.write(f"• Scope 3: {summary.get('scope3_total', 0):,.0f} tCO₂e")
+                    st.write(f"• Total Emissions: {summary.get('total_emissions', 0):,.0f} tCO2e")
+                    st.write(f"• Scope 1: {summary.get('scope1_total', 0):,.0f} tCO2e")
+                    st.write(f"• Scope 2: {summary.get('scope2_total', 0):,.0f} tCO2e")
+                    st.write(f"• Scope 3: {summary.get('scope3_total', 0):,.0f} tCO2e")
 
                 # Show data tables
                 st.subheader("📋 Data Tables")
