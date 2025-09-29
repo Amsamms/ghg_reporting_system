@@ -1,0 +1,41 @@
+# Testing Dependencies for GHG Reporting System
+
+# Core testing framework
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-xdist>=3.0.0
+pytest-timeout>=2.1.0
+pytest-mock>=3.10.0
+
+# Coverage reporting
+coverage>=7.0.0
+
+# Performance monitoring
+psutil>=5.9.0
+
+# Mocking and fixtures
+mock>=4.0.0
+factory-boy>=3.2.0
+
+# Data testing
+pytest-datafiles>=3.0.0
+hypothesis>=6.68.0
+
+# GUI testing (optional)
+pytest-qt>=4.2.0
+
+# HTML reporting
+pytest-html>=3.1.0
+
+# Benchmarking
+pytest-benchmark>=4.0.0
+
+# Parallel execution
+pytest-parallel>=0.1.0
+
+# Memory profiling
+memory-profiler>=0.60.0
+
+# Test utilities
+freezegun>=1.2.0
+responses>=0.22.0

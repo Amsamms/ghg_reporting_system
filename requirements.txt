@@ -1,0 +1,21 @@
+# Core Dependencies for GHG Reporting System
+streamlit==1.50.0
+pandas==2.3.2
+numpy==2.2.6
+plotly==6.3.0
+openpyxl==3.1.5
+reportlab==4.4.4
+Jinja2==3.1.6
+matplotlib==3.10.6
+Pillow==11.3.0
+weasyprint==66.0
+
+# Optional: For enhanced UI
+streamlit-option-menu==0.4.0
+
+# For PDF generation alternative
+kaleido==1.1.0
+
+# Testing dependencies (optional for deployment)
+pytest==8.4.2
+pytest-cov==7.0.0
