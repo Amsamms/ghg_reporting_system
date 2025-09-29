@@ -313,7 +313,7 @@ def show_manual_input_page():
 
     with col2:
         report_date = st.date_input("Report Date", value=date.today())
-        num_facilities = st.number_input("Number of Facilities", value=4, min_value=1, max_value=20)
+        num_facilities = st.number_input("Number of Facilities", value=2, min_value=1, max_value=10)
 
     # Store company info
     st.session_state.company_info = {
@@ -325,54 +325,116 @@ def show_manual_input_page():
 
     st.markdown("---")
 
-    # Emission Sources Input
-    st.subheader("🔥 Emission Sources")
+    # Initialize facilities data in session state
+    if 'facilities_data' not in st.session_state:
+        st.session_state.facilities_data = []
 
-    tab1, tab2, tab3 = st.tabs(["Scope 1 (Direct)", "Scope 2 (Energy)", "Scope 3 (Indirect)"])
+    # Facility Input Section
+    st.subheader("🏭 Facility Emissions Data")
+    st.info("📝 Enter emissions data for each facility. The system will automatically aggregate all facilities.")
 
-    # Initialize emission data in session state
-    if 'emission_sources' not in st.session_state:
-        st.session_state.emission_sources = {
-            'scope1': [],
-            'scope2': [],
-            'scope3': []
-        }
+    # Create tabs for each facility
+    if num_facilities > 0:
+        facility_tabs = st.tabs([f"Facility {i+1}" for i in range(int(num_facilities))])
 
-    with tab1:
-        st.write("**Direct emissions from owned or controlled sources**")
-        add_emission_sources("scope1", [
-            "Combustion - Natural Gas", "Combustion - Fuel Oil", "Combustion - Diesel",
-            "Process Emissions - Refining", "Fugitive - Equipment Leaks", "Fugitive - Venting",
-            "Mobile Combustion - Fleet", "Flaring", "Process Venting"
-        ])
-
-    with tab2:
-        st.write("**Indirect emissions from purchased energy**")
-        add_emission_sources("scope2", [
-            "Purchased Electricity", "Purchased Steam", "Purchased Heat/Cooling"
-        ])
-
-    with tab3:
-        st.write("**Other indirect emissions in the value chain**")
-        add_emission_sources("scope3", [
-            "Purchased Goods/Services", "Capital Goods", "Fuel/Energy Activities",
-            "Transportation - Upstream", "Waste Generated", "Business Travel",
-            "Employee Commuting", "Transportation - Downstream", "Processing of Products",
-            "Use of Sold Products", "End-of-life Products", "Leased Assets"
-        ])
+        for idx, tab in enumerate(facility_tabs):
+            with tab:
+                add_facility_emissions(idx)
 
     st.markdown("---")
 
     # Generate data button
     if st.button("🎯 Create GHG Dataset"):
-        if create_manual_dataset():
+        if create_manual_dataset_from_facilities():
             st.markdown("""
             <div class="success-box">
                 ✅ GHG dataset created successfully! You can now generate reports.
             </div>
             """, unsafe_allow_html=True)
         else:
-            st.error("❌ Please add at least one emission source to create a dataset.")
+            st.error("❌ Please enter emissions data for at least one facility.")
+
+def add_facility_emissions(facility_idx):
+    """Add emissions data for a specific facility"""
+
+    # Facility name
+    facility_name = st.text_input(
+        "Facility Name",
+        value=f"Facility {chr(65 + facility_idx)}",  # A, B, C, etc.
+        key=f"facility_{facility_idx}_name"
+    )
+
+    st.write("**Emissions Data (tCO2e/year):**")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        # Production data
+        production = st.number_input(
+            "Production (barrels or units/year)",
+            value=100000.0,
+            min_value=0.0,
+            step=10000.0,
+            key=f"facility_{facility_idx}_production"
+        )
+
+        # Scope 1 emissions
+        scope1 = st.number_input(
+            "Scope 1 - Direct Emissions (tCO2e/year)",
+            value=5000.0,
+            min_value=0.0,
+            step=100.0,
+            key=f"facility_{facility_idx}_scope1",
+            help="Direct emissions from owned/controlled sources"
+        )
+
+        # Scope 2 emissions
+        scope2 = st.number_input(
+            "Scope 2 - Energy Emissions (tCO2e/year)",
+            value=3000.0,
+            min_value=0.0,
+            step=100.0,
+            key=f"facility_{facility_idx}_scope2",
+            help="Emissions from purchased electricity, steam, heat, cooling"
+        )
+
+    with col2:
+        # Scope 3 emissions
+        scope3 = st.number_input(
+            "Scope 3 - Indirect Emissions (tCO2e/year)",
+            value=2000.0,
+            min_value=0.0,
+            step=100.0,
+            key=f"facility_{facility_idx}_scope3",
+            help="Other indirect emissions in value chain"
+        )
+
+        # Energy intensity
+        total_emissions = scope1 + scope2 + scope3
+        if production > 0:
+            energy_intensity = total_emissions / production
+        else:
+            energy_intensity = 0
+
+        st.metric("Total Emissions", f"{total_emissions:,.0f} tCO2e")
+        st.metric("Energy Intensity", f"{energy_intensity:.4f} tCO2e/unit")
+
+    # Store facility data
+    facility_data = {
+        'idx': facility_idx,
+        'name': facility_name,
+        'scope1': scope1,
+        'scope2': scope2,
+        'scope3': scope3,
+        'production': production,
+        'total': total_emissions,
+        'intensity': energy_intensity
+    }
+
+    # Update session state
+    if len(st.session_state.facilities_data) <= facility_idx:
+        st.session_state.facilities_data.extend([{}] * (facility_idx + 1 - len(st.session_state.facilities_data)))
+    st.session_state.facilities_data[facility_idx] = facility_data
 
 def add_emission_sources(scope, default_sources):
     """Add emission sources for a specific scope"""
@@ -465,29 +527,31 @@ def add_emission_sources(scope, default_sources):
 
         st.session_state.emission_sources[scope] = sources_data
 
-def create_manual_dataset():
-    """Create dataset from manual inputs"""
+def create_manual_dataset_from_facilities():
+    """Create dataset from facility-level manual inputs"""
     try:
-        # Check if we have any emission sources
-        total_sources = (len(st.session_state.emission_sources.get('scope1', [])) +
-                        len(st.session_state.emission_sources.get('scope2', [])) +
-                        len(st.session_state.emission_sources.get('scope3', [])))
-
-        if total_sources == 0:
+        # Check if we have facility data
+        if not st.session_state.facilities_data or len(st.session_state.facilities_data) == 0:
             return False
 
-        # Create temporary Excel file with manual data
+        # Filter out empty facility data
+        valid_facilities = [f for f in st.session_state.facilities_data if f]
+
+        if len(valid_facilities) == 0:
+            return False
+
+        # Create temporary Excel file with facility data
         excel_gen = GHGExcelGenerator()
         excel_gen.company_info.update(st.session_state.company_info)
 
-        # Override the dummy data generation with manual data
-        manual_data = generate_manual_data_structure()
+        # Generate data structure from facility inputs
+        manual_data = generate_data_from_facilities(valid_facilities)
 
         # Create temporary file
         with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
             tmp_path = tmp_file.name
 
-        # Create Excel file with manual data
+        # Create Excel file with real facility data
         create_manual_excel(tmp_path, manual_data)
 
         # Load with report generator
@@ -504,7 +568,76 @@ def create_manual_dataset():
 
     except Exception as e:
         st.error(f"Error creating dataset: {str(e)}")
+        import traceback
+        st.error(f"Detailed error: {traceback.format_exc()}")
         return False
+
+def generate_data_from_facilities(facilities):
+    """Generate data structure from real facility inputs - NO FAKE DATA"""
+    data = {
+        'scope1': [],
+        'scope2': [],
+        'scope3': [],
+        'energy': [],
+        'facilities': [],
+        'totals': {}
+    }
+
+    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+    # Aggregate scope data from all facilities
+    scope1_total = sum([f['scope1'] for f in facilities])
+    scope2_total = sum([f['scope2'] for f in facilities])
+    scope3_total = sum([f['scope3'] for f in facilities])
+    grand_total = scope1_total + scope2_total + scope3_total
+
+    # Create scope emission entries (aggregated across all facilities)
+    # Distribute evenly across months (user entered annual totals)
+    if scope1_total > 0:
+        data['scope1'].append({
+            'Source': 'Aggregated Direct Emissions',
+            'Annual_Total': scope1_total,
+            'Percentage': 100.0,
+            **{month: scope1_total / 12 for month in months}
+        })
+
+    if scope2_total > 0:
+        data['scope2'].append({
+            'Source': 'Aggregated Energy Emissions',
+            'Annual_Total': scope2_total,
+            'Percentage': 100.0,
+            **{month: scope2_total / 12 for month in months}
+        })
+
+    if scope3_total > 0:
+        data['scope3'].append({
+            'Source': 'Aggregated Indirect Emissions',
+            'Annual_Total': scope3_total,
+            'Percentage': 100.0,
+            **{month: scope3_total / 12 for month in months}
+        })
+
+    # Create facility breakdown with REAL user input data
+    for facility in facilities:
+        data['facilities'].append({
+            'Facility': facility['name'],
+            'Scope_1': facility['scope1'],
+            'Scope_2': facility['scope2'],
+            'Scope_3': facility['scope3'],
+            'Energy_Intensity': facility['intensity'],
+            'Production': facility['production']
+        })
+
+    # Store totals
+    data['totals'] = {
+        'scope1_total': scope1_total,
+        'scope2_total': scope2_total,
+        'scope3_total': scope3_total,
+        'grand_total': grand_total
+    }
+
+    return data
 
 def generate_manual_data_structure():
     """Generate data structure from manual inputs"""
