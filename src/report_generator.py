@@ -606,6 +606,38 @@ class GHGReportGenerator:
             return {'company_name': 'Unknown Company', 'reporting_year': '2024'}
 
         try:
+            # First, try to get Dashboard data from already-loaded data (works for sample data)
+            if 'Dashboard' in self.data:
+                dashboard_df = self.data['Dashboard']
+
+                if not dashboard_df.empty:
+                    company_info = {}
+
+                    # Dashboard sheet when read with header=0 has first row as columns
+                    # So columns might be ['Company Name', 'PetrolCorp International']
+                    # and first data row might be ['Reporting Year', 2024]
+
+                    # Try to extract company name from column header (2nd column name)
+                    if len(dashboard_df.columns) > 1:
+                        company_name_candidate = dashboard_df.columns[1]
+                        if pd.notna(company_name_candidate) and str(company_name_candidate) not in ['0', '1', 'Unnamed']:
+                            company_info['company_name'] = str(company_name_candidate)
+
+                    # Try to extract reporting year from first row second column
+                    if not dashboard_df.empty and len(dashboard_df.columns) > 1:
+                        year_candidate = dashboard_df.iloc[0, 1]
+                        if pd.notna(year_candidate):
+                            company_info['reporting_year'] = str(year_candidate)
+
+                    # Set defaults if not found
+                    if 'company_name' not in company_info:
+                        company_info['company_name'] = 'Unknown Company'
+                    if 'reporting_year' not in company_info:
+                        company_info['reporting_year'] = '2024'
+
+                    return company_info
+
+            # Fallback: read from Excel file directly (for uploaded files)
             # Always read Dashboard sheet with header=None to avoid confusion
             dashboard_df_raw = pd.read_excel(self.excel_file, sheet_name='Dashboard', header=None)
 
