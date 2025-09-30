@@ -606,21 +606,29 @@ class GHGReportGenerator:
             return {'company_name': 'Unknown Company', 'reporting_year': '2024'}
 
         try:
-            dashboard_df = self.data.get('Dashboard', pd.DataFrame())
+            # Read Dashboard sheet without treating first row as header
+            dashboard_df = pd.read_excel(self.excel_file, sheet_name='Dashboard', header=None)
 
             if dashboard_df.empty:
                 return {'company_name': 'Unknown Company', 'reporting_year': '2024'}
 
-            # Dashboard sheet has format: [Label, Value] in columns
+            # Dashboard sheet has format: [Label, Value] in rows
             company_info = {}
 
-            # Extract company name (row 0)
-            if len(dashboard_df) > 0 and len(dashboard_df.columns) > 1:
-                company_info['company_name'] = str(dashboard_df.iloc[0, 1]) if pd.notna(dashboard_df.iloc[0, 1]) else 'Unknown Company'
+            # Search for 'Company Name' in first column and get corresponding value
+            for idx, row in dashboard_df.iterrows():
+                if len(row) > 1:
+                    label = str(row[0]).strip().lower()
+                    if 'company name' in label:
+                        company_info['company_name'] = str(row[1]) if pd.notna(row[1]) else 'Unknown Company'
+                    elif 'reporting year' in label:
+                        company_info['reporting_year'] = str(row[1]) if pd.notna(row[1]) else '2024'
 
-            # Extract reporting year (row 1)
-            if len(dashboard_df) > 1 and len(dashboard_df.columns) > 1:
-                company_info['reporting_year'] = str(dashboard_df.iloc[1, 1]) if pd.notna(dashboard_df.iloc[1, 1]) else '2024'
+            # Set defaults if not found
+            if 'company_name' not in company_info:
+                company_info['company_name'] = 'Unknown Company'
+            if 'reporting_year' not in company_info:
+                company_info['reporting_year'] = '2024'
 
             return company_info
         except Exception as e:

@@ -373,7 +373,7 @@ class HTMLReportGenerator:
 
         <div class="content">
             <section id="overview" class="section">
-                <h2><i class="fas fa-chart-line"></i> Executive Overview</h2>
+                <h2><i class="fas fa-chart-line"></i> Executive Overview of {{ summary_stats.company_name }}</h2>
 
                 <div class="kpi-grid">
                     <div class="kpi-card">
