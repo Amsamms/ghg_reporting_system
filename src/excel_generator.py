@@ -88,15 +88,20 @@ class GHGExcelGenerator:
             row['Percentage'] = (row['Annual_Total'] / total_scope3) * 100
 
         # Emission by source data (energy-related emission sources)
-        emission_sources = [
-            'Natural Gas', 'Electricity', 'Steam',
-            'Fuel Oil', 'Diesel', 'Gasoline'
-        ]
+        # Different ranges for each source to show meaningful variation
+        emission_sources_ranges = {
+            'Natural Gas': (1500, 3000),
+            'Electricity': (2000, 3500),
+            'Steam': (800, 1500),
+            'Fuel Oil': (1000, 2000),
+            'Diesel': (600, 1200),
+            'Gasoline': (400, 900)
+        }
 
         emission_by_source_data = []
-        for source in emission_sources:
-            # Monthly emissions in tCO2e
-            monthly_values = [random.uniform(500, 2000) for _ in months]
+        for source, (min_val, max_val) in emission_sources_ranges.items():
+            # Monthly emissions in tCO2e with varied ranges per source
+            monthly_values = [random.uniform(min_val, max_val) for _ in months]
             emission_by_source_data.append({
                 'Source': source,
                 'Annual_Total_tCO2e': sum(monthly_values),

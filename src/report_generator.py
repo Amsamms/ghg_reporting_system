@@ -558,13 +558,16 @@ class GHGReportGenerator:
 
             # Pie chart for emission distribution and bar chart for emissions
             if 'Source' in emission_df.columns and 'Annual_Total_tCO2e' in emission_df.columns:
+                # Sort by emissions descending for better visualization
+                emission_df_sorted = emission_df.sort_values('Annual_Total_tCO2e', ascending=False)
+
                 fig = make_subplots(
                     rows=1, cols=2,
                     subplot_titles=('Emission Distribution by Source', 'Emissions by Source (tCO₂e)'),
-                    specs=[[{"type": "pie"}, {"type": "bar"}]]
+                    specs=[[{"type": "pie"}, {"type": "xy"}]]  # Changed from "bar" to "xy"
                 )
 
-                # Define proper colors for pie chart
+                # Define proper colors for charts
                 colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F']
 
                 # Pie chart with actual percentages calculated from data
@@ -581,17 +584,26 @@ class GHGReportGenerator:
                     showlegend=True
                 ), row=1, col=1)
 
-                # Bar chart for emissions in tCO₂e
+                # Bar chart for emissions in tCO₂e - using sorted data for better visualization
+                # Assign colors to match pie chart
+                source_colors = {source: colors[i % len(colors)] for i, source in enumerate(emission_df['Source'])}
+                bar_colors = [source_colors[source] for source in emission_df_sorted['Source']]
+
                 fig.add_trace(go.Bar(
-                    x=emission_df['Source'],
-                    y=emission_df['Annual_Total_tCO2e'],
-                    marker_color='#74B9FF',
-                    text=[f'{val:,.0f}' for val in emission_df['Annual_Total_tCO2e']],
-                    textposition='auto',
-                    name='Emissions (tCO₂e)'
+                    x=emission_df_sorted['Source'],
+                    y=emission_df_sorted['Annual_Total_tCO2e'],
+                    marker=dict(
+                        color=bar_colors,
+                        line=dict(color='#FFFFFF', width=1)
+                    ),
+                    text=[f'{val:,.0f}' for val in emission_df_sorted['Annual_Total_tCO2e']],
+                    textposition='outside',
+                    name='Emissions (tCO₂e)',
+                    showlegend=False
                 ), row=1, col=2)
 
-                # Update y-axis label for bar chart
+                # Update axes labels
+                fig.update_xaxes(title_text='Emission Source', row=1, col=2)
                 fig.update_yaxes(title_text='Emissions (tCO₂e)', row=1, col=2)
 
                 fig.update_layout(
