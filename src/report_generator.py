@@ -606,47 +606,23 @@ class GHGReportGenerator:
             return {'company_name': 'Unknown Company', 'reporting_year': '2024'}
 
         try:
-            # Try to read Dashboard sheet without header first (for already-loaded data)
-            dashboard_df = self.data.get('Dashboard', pd.DataFrame())
+            # Always read Dashboard sheet with header=None to avoid confusion
+            dashboard_df_raw = pd.read_excel(self.excel_file, sheet_name='Dashboard', header=None)
 
-            if dashboard_df.empty:
+            if dashboard_df_raw.empty:
                 return {'company_name': 'Unknown Company', 'reporting_year': '2024'}
 
             company_info = {}
 
-            # Dashboard sheet was saved with header=False, but pandas reads it with first row as header
-            # So the actual data is in the column names and first row
-            # Column 0 should be 'Company Name' and column 1 should be the value
+            # Dashboard sheet format: [Label, Value] in columns 0 and 1
+            # Row 0: ['Company Name', actual_company_name]
+            # Row 1: ['Reporting Year', actual_year]
 
-            # Check if 'Company Name' is a column name (happens when first row becomes header)
-            if 'Company Name' in dashboard_df.columns and len(dashboard_df) > 0:
-                # The company name is in the first row, second column
-                company_info['company_name'] = str(dashboard_df['Company Name'].iloc[0]) if pd.notna(dashboard_df['Company Name'].iloc[0]) else 'Unknown Company'
-            else:
-                # Try searching through rows as [Label, Value] pairs
-                for idx, row in dashboard_df.iterrows():
-                    if len(row) > 1:
-                        # Get first two values regardless of column names
-                        label = str(row.iloc[0]).strip() if pd.notna(row.iloc[0]) else ''
-                        value = str(row.iloc[1]) if pd.notna(row.iloc[1]) else ''
+            if len(dashboard_df_raw) > 0 and len(dashboard_df_raw.columns) > 1:
+                company_info['company_name'] = str(dashboard_df_raw.iloc[0, 1]) if pd.notna(dashboard_df_raw.iloc[0, 1]) else 'Unknown Company'
 
-                        if 'Company Name' in label or 'company name' in label.lower():
-                            company_info['company_name'] = value if value else 'Unknown Company'
-                        elif 'Reporting Year' in label or 'reporting year' in label.lower():
-                            company_info['reporting_year'] = value if value else '2024'
-
-            # If still not found, try reading the Excel file directly with header=None
-            if 'company_name' not in company_info:
-                try:
-                    dashboard_df_raw = pd.read_excel(self.excel_file, sheet_name='Dashboard', header=None)
-                    if not dashboard_df_raw.empty and len(dashboard_df_raw) > 0:
-                        # First row should be ['Company Name', actual_company_name]
-                        if len(dashboard_df_raw.columns) > 1:
-                            company_info['company_name'] = str(dashboard_df_raw.iloc[0, 1]) if pd.notna(dashboard_df_raw.iloc[0, 1]) else 'Unknown Company'
-                        if len(dashboard_df_raw) > 1 and len(dashboard_df_raw.columns) > 1:
-                            company_info['reporting_year'] = str(dashboard_df_raw.iloc[1, 1]) if pd.notna(dashboard_df_raw.iloc[1, 1]) else '2024'
-                except:
-                    pass
+            if len(dashboard_df_raw) > 1 and len(dashboard_df_raw.columns) > 1:
+                company_info['reporting_year'] = str(dashboard_df_raw.iloc[1, 1]) if pd.notna(dashboard_df_raw.iloc[1, 1]) else '2024'
 
             # Set defaults if not found
             if 'company_name' not in company_info:
