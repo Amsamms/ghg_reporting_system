@@ -545,34 +545,35 @@ class GHGReportGenerator:
             print(f"Error creating facility breakdown chart: {e}")
             return None
 
-    def create_energy_consumption_chart(self):
-        """Create energy consumption analysis chart"""
+    def create_emission_by_source_chart(self):
+        """Create emission by source analysis chart"""
         if not self.data:
             return None
 
         try:
-            energy_df = self.data.get('Energy Consumption', pd.DataFrame())
+            emission_df = self.data.get('Emission By Source', pd.DataFrame())
 
-            if energy_df.empty:
+            if emission_df.empty:
                 return None
 
-            # Pie chart for energy mix
-            if 'Energy_Source' in energy_df.columns and 'Annual_Total' in energy_df.columns:
+            # Pie chart for emission distribution and bar chart for emissions
+            if 'Source' in emission_df.columns and 'Annual_Total_tCO2e' in emission_df.columns:
                 fig = make_subplots(
                     rows=1, cols=2,
-                    subplot_titles=('Energy Consumption Mix', 'Energy Intensity by Source'),
+                    subplot_titles=('Emission Distribution by Source', 'Emissions by Source (tCO₂e)'),
                     specs=[[{"type": "pie"}, {"type": "bar"}]]
                 )
 
                 # Define proper colors for pie chart
                 colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F']
 
+                # Pie chart with actual percentages calculated from data
                 fig.add_trace(go.Pie(
-                    labels=energy_df['Energy_Source'],
-                    values=energy_df['Annual_Total'],
+                    labels=emission_df['Source'],
+                    values=emission_df['Annual_Total_tCO2e'],
                     hole=0.3,
                     marker=dict(
-                        colors=colors[:len(energy_df)],
+                        colors=colors[:len(emission_df)],
                         line=dict(color='#FFFFFF', width=2)
                     ),
                     textinfo='label+percent',
@@ -580,21 +581,23 @@ class GHGReportGenerator:
                     showlegend=True
                 ), row=1, col=1)
 
-                # Bar chart for emission factors
-                if 'Emission_Factor' in energy_df.columns:
-                    fig.add_trace(go.Bar(
-                        x=energy_df['Energy_Source'],
-                        y=energy_df['Emission_Factor'],
-                        marker_color='#74B9FF',
-                        text=energy_df['Emission_Factor'].round(3),
-                        textposition='auto',
-                        name='Emission Factor (kgCO₂e/MWh)'
-                    ), row=1, col=2)
+                # Bar chart for emissions in tCO₂e
+                fig.add_trace(go.Bar(
+                    x=emission_df['Source'],
+                    y=emission_df['Annual_Total_tCO2e'],
+                    marker_color='#74B9FF',
+                    text=[f'{val:,.0f}' for val in emission_df['Annual_Total_tCO2e']],
+                    textposition='auto',
+                    name='Emissions (tCO₂e)'
+                ), row=1, col=2)
+
+                # Update y-axis label for bar chart
+                fig.update_yaxes(title_text='Emissions (tCO₂e)', row=1, col=2)
 
                 fig.update_layout(
                     height=500,
                     showlegend=True,
-                    title_text="Energy Consumption Analysis"
+                    title_text="Emission By Source Analysis"
                 )
 
                 # Update pie chart formatting
@@ -606,7 +609,7 @@ class GHGReportGenerator:
 
                 return fig
         except Exception as e:
-            print(f"Error creating energy consumption chart: {e}")
+            print(f"Error creating emission by source chart: {e}")
             return None
 
     def generate_recommendations(self):

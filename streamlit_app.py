@@ -227,7 +227,7 @@ def show_upload_page():
             <li><strong>Scope 1 Emissions:</strong> Direct emission sources</li>
             <li><strong>Scope 2 Emissions:</strong> Energy-related emissions</li>
             <li><strong>Scope 3 Emissions:</strong> Value chain emissions</li>
-            <li><strong>Energy Consumption:</strong> Energy use data</li>
+            <li><strong>Emission By Source:</strong> Energy-related emission sources</li>
             <li><strong>Facility Breakdown:</strong> Site-specific data</li>
             <li><strong>Targets & Performance:</strong> Goal tracking</li>
         </ul>
@@ -340,6 +340,136 @@ def show_manual_input_page():
         for idx, tab in enumerate(facility_tabs):
             with tab:
                 add_facility_emissions(idx)
+
+    st.markdown("---")
+
+    # Emission By Source Input Section
+    st.subheader("💨 Emission By Source Data")
+    st.info("📝 Enter emissions data for energy-related sources (separate from Scope 1,2,3 data above).")
+
+    # Initialize emission_by_source data in session state
+    if 'emission_by_source_data' not in st.session_state:
+        st.session_state.emission_by_source_data = []
+
+    # Predefined emission sources
+    emission_sources = ['Natural Gas', 'Electricity', 'Steam', 'Fuel Oil', 'Diesel', 'Gasoline']
+
+    st.write("**Select emission sources to include:**")
+    selected_emission_sources = st.multiselect(
+        "Emission Sources",
+        emission_sources,
+        key="emission_sources_select"
+    )
+
+    # Custom emission sources
+    if 'custom_emission_sources' not in st.session_state:
+        st.session_state.custom_emission_sources = []
+
+    st.markdown("---")
+    st.write("**➕ Add Custom Emission Source:**")
+
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        new_emission_source = st.text_input(
+            "Custom emission source name",
+            key="new_emission_source_input",
+            placeholder="e.g., Propane, Biomass, etc."
+        )
+    with col2:
+        if st.button("Add Source", key="add_emission_source_button"):
+            if new_emission_source:
+                all_emission_sources = emission_sources + selected_emission_sources + st.session_state.custom_emission_sources
+                if new_emission_source in all_emission_sources:
+                    st.error(f"❌ Error: '{new_emission_source}' already exists.")
+                else:
+                    st.session_state.custom_emission_sources.append(new_emission_source)
+                    st.success(f"✅ Added custom source: '{new_emission_source}'")
+                    st.rerun()
+
+    # Display custom sources with delete option
+    if st.session_state.custom_emission_sources:
+        st.write("**Custom Emission Sources:**")
+        for idx, source in enumerate(st.session_state.custom_emission_sources):
+            col1, col2 = st.columns([4, 1])
+            with col1:
+                st.text(f"• {source}")
+            with col2:
+                if st.button("🗑️ Delete", key=f"delete_emission_source_{idx}"):
+                    st.session_state.custom_emission_sources.pop(idx)
+                    st.rerun()
+
+    # Combine all selected sources
+    all_selected_emission_sources = selected_emission_sources + st.session_state.custom_emission_sources
+
+    # Input data for selected sources
+    if all_selected_emission_sources:
+        st.markdown("---")
+        st.write("**Enter emissions data (tCO₂e):**")
+
+        # Input method selection
+        emission_input_method = st.radio(
+            "Data input method:",
+            ["Annual Total", "Monthly Values"],
+            key="emission_input_method",
+            help="Choose annual for quick input, monthly for precise data"
+        )
+
+        emission_sources_data = []
+        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+        if emission_input_method == "Annual Total":
+            for source in all_selected_emission_sources:
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.write(source)
+                with col2:
+                    annual_total = st.number_input(
+                        "tCO₂e/year",
+                        value=1000.0,
+                        min_value=0.0,
+                        step=100.0,
+                        key=f"emission_{source}_annual",
+                        label_visibility="collapsed"
+                    )
+
+                emission_sources_data.append({
+                    'Source': source,
+                    'Annual_Total_tCO2e': annual_total,
+                    **{month: annual_total / 12 for month in months}
+                })
+        else:
+            # Monthly input
+            for source in all_selected_emission_sources:
+                with st.expander(f"📊 {source} - Monthly Data", expanded=False):
+                    monthly_values = {}
+                    cols = st.columns(4)
+                    for i, month in enumerate(months):
+                        with cols[i % 4]:
+                            monthly_values[month] = st.number_input(
+                                month,
+                                value=100.0,
+                                min_value=0.0,
+                                step=10.0,
+                                key=f"emission_{source}_{month}"
+                            )
+
+                    annual_total = sum(monthly_values.values())
+                    st.write(f"**Annual Total: {annual_total:,.2f} tCO₂e**")
+
+                    emission_sources_data.append({
+                        'Source': source,
+                        'Annual_Total_tCO2e': annual_total,
+                        **monthly_values
+                    })
+
+        # Store in session state
+        st.session_state.emission_by_source_data = emission_sources_data
+
+        # Show summary
+        st.markdown("---")
+        total_emission_by_source = sum([s['Annual_Total_tCO2e'] for s in emission_sources_data])
+        st.metric("Total Emission By Source", f"{total_emission_by_source:,.0f} tCO₂e")
 
     st.markdown("---")
 
@@ -685,7 +815,7 @@ def generate_data_from_facilities(facilities):
         'scope1': [],
         'scope2': [],
         'scope3': [],
-        'energy': [],
+        'emission_by_source': [],
         'facilities': [],
         'totals': {}
     }
@@ -770,6 +900,13 @@ def generate_data_from_facilities(facilities):
         'grand_total': grand_total
     }
 
+    # Add emission_by_source data from session state
+    import streamlit as st
+    if hasattr(st, 'session_state') and hasattr(st.session_state, 'emission_by_source_data'):
+        data['emission_by_source'] = st.session_state.emission_by_source_data
+    else:
+        data['emission_by_source'] = []
+
     return data
 
 # OLD FUNCTION REMOVED - Used fake facility generation with arbitrary multipliers
@@ -798,13 +935,17 @@ def create_manual_excel(filepath, data):
         pd.DataFrame(data['scope3']).to_excel(writer, sheet_name='Scope 3 Emissions', index=False)
         pd.DataFrame(data['facilities']).to_excel(writer, sheet_name='Facility Breakdown', index=False)
 
-        # Create dummy energy and targets sheets
-        energy_data = pd.DataFrame([
-            {'Energy_Source': 'Natural Gas (MWh)', 'Annual_Total': 10000, 'Emission_Factor': 0.5},
-            {'Energy_Source': 'Electricity (MWh)', 'Annual_Total': 8000, 'Emission_Factor': 0.4},
-            {'Energy_Source': 'Steam (MWh)', 'Annual_Total': 5000, 'Emission_Factor': 0.3}
-        ])
-        energy_data.to_excel(writer, sheet_name='Energy Consumption', index=False)
+        # Create Emission By Source sheet (use dummy data if not provided)
+        if 'emission_by_source' in data and data['emission_by_source']:
+            emission_data = pd.DataFrame(data['emission_by_source'])
+        else:
+            # Dummy data if user didn't input
+            emission_data = pd.DataFrame([
+                {'Source': 'Natural Gas', 'Annual_Total_tCO2e': 10000},
+                {'Source': 'Electricity', 'Annual_Total_tCO2e': 8000},
+                {'Source': 'Steam', 'Annual_Total_tCO2e': 5000}
+            ])
+        emission_data.to_excel(writer, sheet_name='Emission By Source', index=False)
 
         targets_data = pd.DataFrame([
             {'Metric': 'Total GHG Reduction Target (%)', 'Target_2024': 5, 'Actual_2024': 3.2, 'Status': 'On Track'}

@@ -87,19 +87,19 @@ class GHGExcelGenerator:
         for row in scope3_data:
             row['Percentage'] = (row['Annual_Total'] / total_scope3) * 100
 
-        # Energy consumption data (similar to SEU in energy management)
-        energy_sources = [
-            'Natural Gas (MWh)', 'Electricity (MWh)', 'Steam (MWh)',
-            'Fuel Oil (MWh)', 'Diesel (MWh)', 'Gasoline (MWh)'
+        # Emission by source data (energy-related emission sources)
+        emission_sources = [
+            'Natural Gas', 'Electricity', 'Steam',
+            'Fuel Oil', 'Diesel', 'Gasoline'
         ]
 
-        energy_data = []
-        for source in energy_sources:
-            monthly_values = [random.uniform(5000, 15000) for _ in months]
-            energy_data.append({
-                'Energy_Source': source,
-                'Annual_Total': sum(monthly_values),
-                'Emission_Factor': random.uniform(0.2, 0.8),  # kgCO2e/MWh
+        emission_by_source_data = []
+        for source in emission_sources:
+            # Monthly emissions in tCO2e
+            monthly_values = [random.uniform(500, 2000) for _ in months]
+            emission_by_source_data.append({
+                'Source': source,
+                'Annual_Total_tCO2e': sum(monthly_values),
                 **dict(zip(months, monthly_values))
             })
 
@@ -119,7 +119,7 @@ class GHGExcelGenerator:
             'scope1': scope1_data,
             'scope2': scope2_data,
             'scope3': scope3_data,
-            'energy': energy_data,
+            'emission_by_source': emission_by_source_data,
             'facilities': facility_data,
             'totals': {
                 'scope1_total': total_scope1,
@@ -160,9 +160,9 @@ class GHGExcelGenerator:
             df_scope3 = pd.DataFrame(data['scope3'])
             df_scope3.to_excel(writer, sheet_name='Scope 3 Emissions', index=False)
 
-            # Energy Consumption (SEU equivalent)
-            df_energy = pd.DataFrame(data['energy'])
-            df_energy.to_excel(writer, sheet_name='Energy Consumption', index=False)
+            # Emission By Source
+            df_emission_by_source = pd.DataFrame(data['emission_by_source'])
+            df_emission_by_source.to_excel(writer, sheet_name='Emission By Source', index=False)
 
             # Facility Breakdown
             df_facilities = pd.DataFrame(data['facilities'])

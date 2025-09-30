@@ -77,10 +77,10 @@ class HTMLReportGenerator:
         if facility_chart:
             charts['facility_breakdown'] = plotly.io.to_html(facility_chart, include_plotlyjs=False, div_id="facility-chart", config={'displayModeBar': True})
 
-        # Energy consumption
-        energy_chart = self.report_gen.create_energy_consumption_chart()
-        if energy_chart:
-            charts['energy_consumption'] = plotly.io.to_html(energy_chart, include_plotlyjs=False, div_id="energy-chart", config={'displayModeBar': True})
+        # Emission By Source
+        emission_chart = self.report_gen.create_emission_by_source_chart()
+        if emission_chart:
+            charts['emission_by_source'] = plotly.io.to_html(emission_chart, include_plotlyjs=False, div_id="emission-chart", config={'displayModeBar': True})
 
         return charts
 
@@ -366,7 +366,7 @@ class HTMLReportGenerator:
                 <li><a href="#overview"><i class="fas fa-chart-line"></i> Overview</a></li>
                 <li><a href="#scope-analysis"><i class="fas fa-layer-group"></i> Scope Analysis</a></li>
                 <li><a href="#facility-analysis"><i class="fas fa-industry"></i> Facilities</a></li>
-                <li><a href="#energy-analysis"><i class="fas fa-bolt"></i> Energy</a></li>
+                <li><a href="#emission-analysis"><i class="fas fa-smog"></i> Emission By Source</a></li>
                 <li><a href="#recommendations"><i class="fas fa-lightbulb"></i> Recommendations</a></li>
                 <li><a href="#methodology"><i class="fas fa-cogs"></i> Methodology</a></li>
             </ul>
@@ -476,19 +476,19 @@ class HTMLReportGenerator:
                 </div>
             </section>
 
-            <section id="energy-analysis" class="section">
-                <h2><i class="fas fa-bolt"></i> Energy Consumption & Efficiency</h2>
+            <section id="emission-analysis" class="section">
+                <h2><i class="fas fa-smog"></i> Emission By Source</h2>
 
-                {% if charts.energy_consumption %}
+                {% if charts.emission_by_source %}
                 <div class="chart-container">
-                    <h3>Energy Mix and Intensity</h3>
-                    {{ charts.energy_consumption | safe }}
+                    <h3>Emission Distribution and Analysis</h3>
+                    {{ charts.emission_by_source | safe }}
                 </div>
                 {% endif %}
 
                 <div class="methodology">
-                    <h4><i class="fas fa-cog"></i> Energy Management Approach</h4>
-                    <p>Similar to Significant Energy Uses (SEU) in ISO 50001, this analysis identifies major energy-consuming processes and their associated GHG emissions. This approach enables targeted energy efficiency improvements and strategic transitions to lower-carbon energy sources.</p>
+                    <h4><i class="fas fa-cog"></i> Emission Source Analysis</h4>
+                    <p>This analysis identifies major emission sources from energy-related activities and their contribution to the total GHG footprint. This approach enables targeted emission reduction strategies and strategic transitions to lower-carbon energy sources.</p>
                 </div>
             </section>
 
