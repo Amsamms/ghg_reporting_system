@@ -564,7 +564,7 @@ class GHGReportGenerator:
                 fig = make_subplots(
                     rows=1, cols=2,
                     subplot_titles=('Emission Distribution by Source', 'Emissions by Source (tCO₂e)'),
-                    specs=[[{"type": "pie"}, {"type": "xy"}]]  # Changed from "bar" to "xy"
+                    specs=[[{"type": "domain"}, {"type": "xy"}]]  # domain for pie, xy for bar
                 )
 
                 # Define proper colors for charts
@@ -592,6 +592,7 @@ class GHGReportGenerator:
                 fig.add_trace(go.Bar(
                     x=emission_df_sorted['Source'],
                     y=emission_df_sorted['Annual_Total_tCO2e'],
+                    orientation='v',  # Explicitly set vertical orientation
                     marker=dict(
                         color=bar_colors,
                         line=dict(color='#FFFFFF', width=1)
