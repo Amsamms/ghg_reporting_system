@@ -572,8 +572,8 @@ class GHGReportGenerator:
 
                 # Pie chart with actual percentages calculated from data
                 fig.add_trace(go.Pie(
-                    labels=emission_df['Source'],
-                    values=emission_df['Annual_Total_tCO2e'],
+                    labels=emission_df['Source'].tolist(),
+                    values=emission_df['Annual_Total_tCO2e'].tolist(),
                     hole=0.3,
                     marker=dict(
                         colors=colors[:len(emission_df)],
@@ -590,8 +590,8 @@ class GHGReportGenerator:
                 bar_colors = [source_colors[source] for source in emission_df_sorted['Source']]
 
                 fig.add_trace(go.Bar(
-                    x=emission_df_sorted['Source'],
-                    y=emission_df_sorted['Annual_Total_tCO2e'],
+                    x=emission_df_sorted['Source'].tolist(),
+                    y=emission_df_sorted['Annual_Total_tCO2e'].tolist(),
                     orientation='v',  # Explicitly set vertical orientation
                     marker=dict(
                         color=bar_colors,
