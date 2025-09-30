@@ -86,7 +86,7 @@ def main():
     # App Header
     st.markdown("""
     <div class="main-header">
-        <h1>🌱 Professional GHG Reporting System</h1>
+        <h1>EPROM 🌱 Professional GHG Reporting System</h1>
         <p>Comprehensive Greenhouse Gas Emissions Analysis for Petroleum Companies</p>
         <small>Following GHG Protocol Corporate Standard & ISO 14064 Guidelines</small>
     </div>
