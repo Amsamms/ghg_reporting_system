@@ -62,7 +62,8 @@ class HTMLReportGenerator:
             charts['monthly_trend'] = plotly.io.to_html(trend_chart, include_plotlyjs=False, div_id="monthly-trend-chart", config={'displayModeBar': True})
 
         # Sankey diagram - with proper configuration for better rendering
-        sankey_chart = self.report_gen.create_sankey_diagram(facility_filter)
+        # Using threshold_percent=80 as default
+        sankey_chart = self.report_gen.create_sankey_diagram(facility_filter, threshold_percent=80)
         if sankey_chart:
             charts['sankey'] = plotly.io.to_html(
                 sankey_chart,

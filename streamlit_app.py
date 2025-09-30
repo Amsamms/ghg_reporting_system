@@ -395,6 +395,15 @@ def add_facility_emissions(facility_idx):
 
     st.write("**📋 Emission Sources Configuration:**")
 
+    # Initialize custom sources in session state
+    if 'custom_sources' not in st.session_state:
+        st.session_state.custom_sources = {}
+
+    for scope in ['scope1', 'scope2', 'scope3']:
+        key = f"facility_{facility_idx}_{scope}_custom"
+        if key not in st.session_state.custom_sources:
+            st.session_state.custom_sources[key] = []
+
     # Collect all sources data
     facility_sources = {
         'scope1': [],
@@ -411,9 +420,15 @@ def add_facility_emissions(facility_idx):
             key=f"facility_{facility_idx}_scope1_sources"
         )
 
-        if selected_scope1:
+        # Custom sources UI for Scope 1
+        custom_scope1 = add_custom_source_ui(facility_idx, 'scope1', scope_sources['scope1'], selected_scope1)
+
+        # Combine predefined and custom sources
+        all_scope1_sources = selected_scope1 + custom_scope1
+
+        if all_scope1_sources:
             facility_sources['scope1'] = add_sources_with_data(
-                facility_idx, 'scope1', selected_scope1
+                facility_idx, 'scope1', all_scope1_sources
             )
 
     # Scope 2 Sources
@@ -425,9 +440,15 @@ def add_facility_emissions(facility_idx):
             key=f"facility_{facility_idx}_scope2_sources"
         )
 
-        if selected_scope2:
+        # Custom sources UI for Scope 2
+        custom_scope2 = add_custom_source_ui(facility_idx, 'scope2', scope_sources['scope2'], selected_scope2)
+
+        # Combine predefined and custom sources
+        all_scope2_sources = selected_scope2 + custom_scope2
+
+        if all_scope2_sources:
             facility_sources['scope2'] = add_sources_with_data(
-                facility_idx, 'scope2', selected_scope2
+                facility_idx, 'scope2', all_scope2_sources
             )
 
     # Scope 3 Sources
@@ -439,9 +460,15 @@ def add_facility_emissions(facility_idx):
             key=f"facility_{facility_idx}_scope3_sources"
         )
 
-        if selected_scope3:
+        # Custom sources UI for Scope 3
+        custom_scope3 = add_custom_source_ui(facility_idx, 'scope3', scope_sources['scope3'], selected_scope3)
+
+        # Combine predefined and custom sources
+        all_scope3_sources = selected_scope3 + custom_scope3
+
+        if all_scope3_sources:
             facility_sources['scope3'] = add_sources_with_data(
-                facility_idx, 'scope3', selected_scope3
+                facility_idx, 'scope3', all_scope3_sources
             )
 
     # Calculate totals
@@ -484,6 +511,52 @@ def add_facility_emissions(facility_idx):
     if len(st.session_state.facilities_data) <= facility_idx:
         st.session_state.facilities_data.extend([{}] * (facility_idx + 1 - len(st.session_state.facilities_data)))
     st.session_state.facilities_data[facility_idx] = facility_data
+
+def add_custom_source_ui(facility_idx, scope, predefined_sources, selected_sources):
+    """UI for adding custom emission sources with duplicate validation"""
+
+    key = f"facility_{facility_idx}_{scope}_custom"
+    custom_sources_list = st.session_state.custom_sources[key]
+
+    st.markdown("---")
+    st.write("**➕ Add Custom Source:**")
+
+    col1, col2, col3 = st.columns([3, 2, 1])
+
+    with col1:
+        new_source_name = st.text_input(
+            "Custom source name",
+            key=f"{key}_input",
+            placeholder="e.g., Refrigerant Leaks, Steam Boiler, etc."
+        )
+
+    with col2:
+        add_button = st.button("Add Source", key=f"{key}_add_button")
+
+    # Handle adding new custom source
+    if add_button and new_source_name:
+        # Check for duplicates
+        all_existing_sources = predefined_sources + selected_sources + custom_sources_list
+        if new_source_name in all_existing_sources:
+            st.error(f"❌ Error: '{new_source_name}' already exists. Please use a different name.")
+        else:
+            st.session_state.custom_sources[key].append(new_source_name)
+            st.success(f"✅ Added custom source: '{new_source_name}'")
+            st.rerun()
+
+    # Display existing custom sources with delete buttons
+    if custom_sources_list:
+        st.write("**Custom Sources:**")
+        for idx, custom_source in enumerate(custom_sources_list):
+            col1, col2 = st.columns([4, 1])
+            with col1:
+                st.text(f"• {custom_source}")
+            with col2:
+                if st.button("🗑️ Delete", key=f"{key}_delete_{idx}"):
+                    st.session_state.custom_sources[key].pop(idx)
+                    st.rerun()
+
+    return custom_sources_list
 
 def add_sources_with_data(facility_idx, scope, sources):
     """Add emission data for each source - supports annual or monthly input"""
@@ -807,10 +880,28 @@ def show_reports_page():
         if trend_chart:
             st.plotly_chart(trend_chart, use_container_width=True)
 
-    # Sankey diagram
-    sankey_chart = st.session_state.ghg_data.create_sankey_diagram(selected_facility if selected_facility != 'All Facilities' else None)
+    # Sankey diagram with threshold control
+    st.subheader("🔄 Emission Flow Analysis")
+
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.write("**Sankey Diagram Threshold Control:**")
+    with col2:
+        threshold_percent = st.number_input(
+            "Threshold (%)",
+            min_value=0,
+            max_value=100,
+            value=80,
+            step=5,
+            key="sankey_threshold",
+            help="Show individual sources up to this percentage. Remaining sources grouped as 'Others'."
+        )
+
+    sankey_chart = st.session_state.ghg_data.create_sankey_diagram(
+        facility_filter=selected_facility if selected_facility != 'All Facilities' else None,
+        threshold_percent=threshold_percent
+    )
     if sankey_chart:
-        st.subheader("🔄 Emission Flow Analysis")
         st.plotly_chart(sankey_chart, use_container_width=True)
 
     st.markdown("---")

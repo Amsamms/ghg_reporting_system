@@ -22,11 +22,68 @@ class GHGReportGenerator:
             print(f"Error loading Excel file: {e}")
             return None
 
-    def create_sankey_diagram(self, facility_filter=None):
+    def _apply_threshold_to_sources(self, df, threshold_percent):
+        """Apply threshold to sources and group remaining as 'Others'
+
+        Args:
+            df: DataFrame with 'Source' and 'Annual_Total' columns
+            threshold_percent: Percentage threshold (0-100)
+
+        Returns:
+            tuple: (filtered_df, others_total)
+        """
+        if df.empty or 'Annual_Total' not in df.columns:
+            return df, 0
+
+        # Sort by Annual_Total descending
+        df_sorted = df.sort_values('Annual_Total', ascending=False).copy()
+
+        # Calculate total and cumulative percentage
+        total = df_sorted['Annual_Total'].sum()
+        if total == 0:
+            return df_sorted, 0
+
+        df_sorted['cumulative_pct'] = (df_sorted['Annual_Total'].cumsum() / total * 100)
+
+        # Find sources up to threshold (closest to threshold without going under)
+        if threshold_percent >= 100:
+            # Show all sources
+            return df_sorted, 0
+
+        # Find the index where we exceed threshold
+        exceeds_threshold = df_sorted['cumulative_pct'] >= threshold_percent
+        if exceeds_threshold.any():
+            # Include sources up to and including the one that exceeds threshold
+            threshold_idx = exceeds_threshold.idxmax()
+            idx_position = df_sorted.index.get_loc(threshold_idx)
+
+            # Check which is closer to threshold: including or excluding this source
+            if idx_position > 0:
+                pct_with = df_sorted.loc[threshold_idx, 'cumulative_pct']
+                pct_without = df_sorted.iloc[idx_position - 1]['cumulative_pct']
+
+                if abs(pct_with - threshold_percent) <= abs(pct_without - threshold_percent):
+                    # Including this source is closer to threshold
+                    included_sources = df_sorted.iloc[:idx_position + 1]
+                else:
+                    # Excluding this source is closer to threshold
+                    included_sources = df_sorted.iloc[:idx_position]
+            else:
+                # First source already exceeds threshold, include it
+                included_sources = df_sorted.iloc[:1]
+
+            others_total = df_sorted.iloc[len(included_sources):]['Annual_Total'].sum()
+            return included_sources, others_total
+        else:
+            # All sources combined don't reach threshold, show all
+            return df_sorted, 0
+
+    def create_sankey_diagram(self, facility_filter=None, threshold_percent=80):
         """Create Sankey diagram for GHG emissions flow
 
         Args:
             facility_filter: Optional facility name to filter data
+            threshold_percent: Percentage threshold for grouping sources (default: 80)
         """
         if not self.data:
             return None
@@ -75,8 +132,12 @@ class GHGReportGenerator:
             # Add emission sources first (left side)
             source_index = 0
 
-            # Add scope 1 sources - Top 3, with larger, more readable labels
-            top_scope1 = scope1_df.nlargest(3, 'Annual_Total') if not scope1_df.empty and 'Annual_Total' in scope1_df.columns else pd.DataFrame()
+            # Apply threshold to each scope
+            top_scope1, scope1_others = self._apply_threshold_to_sources(scope1_df, threshold_percent)
+            top_scope2, scope2_others = self._apply_threshold_to_sources(scope2_df, threshold_percent)
+            top_scope3, scope3_others = self._apply_threshold_to_sources(scope3_df, threshold_percent)
+
+            # Add scope 1 sources with threshold-based filtering
             for _, row in top_scope1.iterrows():
                 if 'Source' in row and row['Annual_Total'] > 0:
                     # More readable labels - show full name if short, otherwise truncate smartly
@@ -89,8 +150,13 @@ class GHGReportGenerator:
                     node_indices[f"scope1_{row['Source']}"] = source_index
                     source_index += 1
 
-            # Add scope 2 sources - Top 2
-            top_scope2 = scope2_df.nlargest(2, 'Annual_Total') if not scope2_df.empty and 'Annual_Total' in scope2_df.columns else pd.DataFrame()
+            # Add "Others" for Scope 1 if needed
+            if scope1_others > 0:
+                labels.append("Others (S1)")
+                node_indices["scope1_others"] = source_index
+                source_index += 1
+
+            # Add scope 2 sources with threshold-based filtering
             for _, row in top_scope2.iterrows():
                 if 'Source' in row and row['Annual_Total'] > 0:
                     source_text = str(row['Source'])
@@ -102,8 +168,13 @@ class GHGReportGenerator:
                     node_indices[f"scope2_{row['Source']}"] = source_index
                     source_index += 1
 
-            # Add scope 3 sources - Top 3
-            top_scope3 = scope3_df.nlargest(3, 'Annual_Total') if not scope3_df.empty and 'Annual_Total' in scope3_df.columns else pd.DataFrame()
+            # Add "Others" for Scope 2 if needed
+            if scope2_others > 0:
+                labels.append("Others (S2)")
+                node_indices["scope2_others"] = source_index
+                source_index += 1
+
+            # Add scope 3 sources with threshold-based filtering
             for _, row in top_scope3.iterrows():
                 if 'Source' in row and row['Annual_Total'] > 0:
                     source_text = str(row['Source'])
@@ -114,6 +185,12 @@ class GHGReportGenerator:
                     labels.append(source_name)
                     node_indices[f"scope3_{row['Source']}"] = source_index
                     source_index += 1
+
+            # Add "Others" for Scope 3 if needed
+            if scope3_others > 0:
+                labels.append("Others (S3)")
+                node_indices["scope3_others"] = source_index
+                source_index += 1
 
             # Add scope categories (middle)
             scope_start_index = len(labels)
@@ -145,6 +222,12 @@ class GHGReportGenerator:
                         target.append(node_indices['scope1'])
                         value.append(row['Annual_Total'] * facility_ratio)
 
+            # Add link for Scope 1 "Others" if exists
+            if scope1_others > 0 and 'scope1_others' in node_indices and 'scope1' in node_indices:
+                source.append(node_indices['scope1_others'])
+                target.append(node_indices['scope1'])
+                value.append(scope1_others * facility_ratio)
+
             for _, row in top_scope2.iterrows():
                 if 'Source' in row and row['Annual_Total'] > 0 and 'scope2' in node_indices:
                     source_key = f"scope2_{row['Source']}"
@@ -153,6 +236,12 @@ class GHGReportGenerator:
                         target.append(node_indices['scope2'])
                         value.append(row['Annual_Total'] * facility_ratio)
 
+            # Add link for Scope 2 "Others" if exists
+            if scope2_others > 0 and 'scope2_others' in node_indices and 'scope2' in node_indices:
+                source.append(node_indices['scope2_others'])
+                target.append(node_indices['scope2'])
+                value.append(scope2_others * facility_ratio)
+
             for _, row in top_scope3.iterrows():
                 if 'Source' in row and row['Annual_Total'] > 0 and 'scope3' in node_indices:
                     source_key = f"scope3_{row['Source']}"
@@ -160,6 +249,12 @@ class GHGReportGenerator:
                         source.append(node_indices[source_key])
                         target.append(node_indices['scope3'])
                         value.append(row['Annual_Total'] * facility_ratio)
+
+            # Add link for Scope 3 "Others" if exists
+            if scope3_others > 0 and 'scope3_others' in node_indices and 'scope3' in node_indices:
+                source.append(node_indices['scope3_others'])
+                target.append(node_indices['scope3'])
+                value.append(scope3_others * facility_ratio)
 
             # Links from scopes to total
             if scope1_total > 0 and 'scope1' in node_indices:
