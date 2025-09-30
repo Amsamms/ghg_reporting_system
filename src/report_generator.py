@@ -600,6 +600,33 @@ class GHGReportGenerator:
 
         return recommendations
 
+    def get_company_info(self):
+        """Extract company information from Dashboard sheet"""
+        if not self.data:
+            return {'company_name': 'Unknown Company', 'reporting_year': '2024'}
+
+        try:
+            dashboard_df = self.data.get('Dashboard', pd.DataFrame())
+
+            if dashboard_df.empty:
+                return {'company_name': 'Unknown Company', 'reporting_year': '2024'}
+
+            # Dashboard sheet has format: [Label, Value] in columns
+            company_info = {}
+
+            # Extract company name (row 0)
+            if len(dashboard_df) > 0 and len(dashboard_df.columns) > 1:
+                company_info['company_name'] = str(dashboard_df.iloc[0, 1]) if pd.notna(dashboard_df.iloc[0, 1]) else 'Unknown Company'
+
+            # Extract reporting year (row 1)
+            if len(dashboard_df) > 1 and len(dashboard_df.columns) > 1:
+                company_info['reporting_year'] = str(dashboard_df.iloc[1, 1]) if pd.notna(dashboard_df.iloc[1, 1]) else '2024'
+
+            return company_info
+        except Exception as e:
+            print(f"Error extracting company info: {e}")
+            return {'company_name': 'Unknown Company', 'reporting_year': '2024'}
+
     def get_summary_statistics(self, facility_filter=None):
         """Generate summary statistics for the report
 
@@ -644,6 +671,14 @@ class GHGReportGenerator:
             # Production-based metrics
             carbon_intensity = total_emissions / total_production if total_production > 0 else 0
 
+            # Get company info
+            company_info = self.get_company_info()
+
+            # Get facility names
+            facility_names = []
+            if not facilities_df.empty and 'Facility' in facilities_df.columns:
+                facility_names = facilities_df['Facility'].tolist()
+
             return {
                 'total_emissions': total_emissions,
                 'scope1_total': scope1_total,
@@ -653,6 +688,9 @@ class GHGReportGenerator:
                 'total_facilities': 1 if facility_filter else (len(facilities_df) if not facilities_df.empty else 0),
                 'report_date': self.report_date,
                 'facility_name': facility_filter if facility_filter else 'All Facilities',
+                'company_name': company_info.get('company_name', 'Unknown Company'),
+                'reporting_year': company_info.get('reporting_year', '2024'),
+                'facility_names': facility_names,
                 **scope_percentages
             }
         except Exception as e:
