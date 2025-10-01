@@ -459,5 +459,14 @@ class SimplePDFReportGenerator:
         external assurance by qualified third-party verifiers.
         """
         story.append(Paragraph(methodology_text, self.styles['Normal']))
+        story.append(Spacer(1, 30))
+
+        # Footer signature
+        footer_text = """
+        <para align="center">
+        <i>Developed by Amsamms</i>
+        </para>
+        """
+        story.append(Paragraph(footer_text, self.styles['Normal']))
         story.append(Spacer(1, 15))
         return story
