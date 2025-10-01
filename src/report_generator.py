@@ -487,30 +487,30 @@ class GHGReportGenerator:
                 facilities_df['Total_Emissions'] = facilities_df['Scope_1'] + facilities_df['Scope_2'] + facilities_df['Scope_3']
 
                 fig.add_trace(go.Bar(
-                    x=facilities_df['Facility'],
-                    y=facilities_df['Total_Emissions'],
+                    x=facilities_df['Facility'].tolist(),
+                    y=facilities_df['Total_Emissions'].tolist(),
                     name='Total Emissions',
                     marker_color='#FF6B6B'
                 ), row=1, col=1)
 
                 # Stacked bar for scope breakdown
                 fig.add_trace(go.Bar(
-                    x=facilities_df['Facility'],
-                    y=facilities_df['Scope_1'],
+                    x=facilities_df['Facility'].tolist(),
+                    y=facilities_df['Scope_1'].tolist(),
                     name='Scope 1',
                     marker_color='#FF6B6B'
                 ), row=1, col=2)
 
                 fig.add_trace(go.Bar(
-                    x=facilities_df['Facility'],
-                    y=facilities_df['Scope_2'],
+                    x=facilities_df['Facility'].tolist(),
+                    y=facilities_df['Scope_2'].tolist(),
                     name='Scope 2',
                     marker_color='#4ECDC4'
                 ), row=1, col=2)
 
                 fig.add_trace(go.Bar(
-                    x=facilities_df['Facility'],
-                    y=facilities_df['Scope_3'],
+                    x=facilities_df['Facility'].tolist(),
+                    y=facilities_df['Scope_3'].tolist(),
                     name='Scope 3',
                     marker_color='#45B7D1'
                 ), row=1, col=2)
@@ -518,8 +518,8 @@ class GHGReportGenerator:
             # Energy intensity
             if 'Energy_Intensity' in facilities_df.columns:
                 fig.add_trace(go.Bar(
-                    x=facilities_df['Facility'],
-                    y=facilities_df['Energy_Intensity'],
+                    x=facilities_df['Facility'].tolist(),
+                    y=facilities_df['Energy_Intensity'].tolist(),
                     name='Energy Intensity',
                     marker_color='#96CEB4'
                 ), row=2, col=1)
@@ -527,12 +527,12 @@ class GHGReportGenerator:
             # Production vs Emissions scatter
             if all(col in facilities_df.columns for col in ['Production', 'Total_Emissions']):
                 fig.add_trace(go.Scatter(
-                    x=facilities_df['Production'],
-                    y=facilities_df['Total_Emissions'],
+                    x=facilities_df['Production'].tolist(),
+                    y=facilities_df['Total_Emissions'].tolist(),
                     mode='markers',
                     name='Facilities',
                     marker=dict(size=12, color='#FFEAA7'),
-                    text=facilities_df['Facility']
+                    text=facilities_df['Facility'].tolist()
                 ), row=2, col=2)
 
             fig.update_layout(
