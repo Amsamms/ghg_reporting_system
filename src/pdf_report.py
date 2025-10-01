@@ -351,7 +351,6 @@ class PDFReportGenerator:
                         <b>{i}. {rec.get('category', 'N/A')}</b><br/>
                         {rec.get('recommendation', 'N/A')}<br/>
                         <i>Potential Impact:</i> {rec.get('potential_impact', 'N/A')}<br/>
-                        <i>Timeline:</i> {rec.get('implementation_timeline', 'N/A')}<br/>
                         """
                         story.append(Paragraph(rec_text, self.styles['HighlightBox']))
                         story.append(Spacer(1, 10))

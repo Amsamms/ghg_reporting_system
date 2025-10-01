@@ -1050,6 +1050,46 @@ def show_reports_page():
     # Report generation section
     st.subheader("🎯 Generate Reports")
 
+    # AI Recommendations Toggle
+    st.markdown("### 🤖 AI-Powered Recommendations")
+    use_ai_recs = st.checkbox(
+        "Use AI to generate personalized recommendations",
+        value=False,
+        help="Enable GPT-5 to analyze your data and generate tailored recommendations (requires OpenAI API key)"
+    )
+
+    if use_ai_recs:
+        with st.expander("⚙️ AI Configuration", expanded=True):
+            st.info("""
+            **About AI Recommendations:**
+            - Uses OpenAI's GPT-5-mini model to analyze your emissions data
+            - Generates 5-6 personalized recommendations based on your actual emission sources
+            - Considers petroleum industry best practices and GHG Protocol standards
+            - Cost: ~$0.01-0.02 per report
+            - Falls back to rule-based recommendations if API fails
+            """)
+
+            api_key_input = st.text_input(
+                "OpenAI API Key",
+                type="password",
+                placeholder="sk-...",
+                help="Get your API key from https://platform.openai.com/api-keys"
+            )
+
+            if api_key_input:
+                os.environ['OPENAI_API_KEY'] = api_key_input
+                st.success("✅ API key configured!")
+            else:
+                st.warning("⚠️ Please enter your OpenAI API key to use AI recommendations")
+
+        # Store in session state
+        st.session_state.use_ai_recommendations = use_ai_recs and bool(api_key_input)
+    else:
+        st.session_state.use_ai_recommendations = False
+        st.info("💡 Using rule-based recommendations (threshold-driven analysis)")
+
+    st.markdown("---")
+
     col1, col2 = st.columns(2)
 
     with col1:
@@ -1313,7 +1353,10 @@ def generate_html_report():
         with tempfile.NamedTemporaryFile(delete=False, suffix='.html', mode='w') as tmp_file:
             tmp_path = tmp_file.name
 
-        if html_generator.generate_html_report(tmp_path, facility_filter):
+        # Get use_ai from session state
+        use_ai = st.session_state.get('use_ai_recommendations', False)
+
+        if html_generator.generate_html_report(tmp_path, facility_filter, use_ai=use_ai):
             with open(tmp_path, 'r', encoding='utf-8') as f:
                 html_content = f.read()
 
@@ -1338,7 +1381,10 @@ def generate_pdf_report():
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
             tmp_path = tmp_file.name
 
-        if pdf_generator.generate_simple_pdf_report(tmp_path):
+        # Get use_ai from session state
+        use_ai = st.session_state.get('use_ai_recommendations', False)
+
+        if pdf_generator.generate_simple_pdf_report(tmp_path, use_ai=use_ai):
             with open(tmp_path, 'rb') as f:
                 pdf_content = f.read()
 

@@ -6,6 +6,7 @@ import numpy as np
 from datetime import datetime
 import json
 from pathlib import Path
+import os
 
 class GHGReportGenerator:
     def __init__(self, excel_file_path):
@@ -625,8 +626,8 @@ class GHGReportGenerator:
             print(f"Error creating emission by source chart: {e}")
             return None
 
-    def generate_recommendations(self):
-        """Generate AI-powered recommendations based on data analysis"""
+    def generate_rule_based_recommendations(self):
+        """Generate rule-based recommendations based on data thresholds"""
         if not self.data:
             return []
 
@@ -647,8 +648,7 @@ class GHGReportGenerator:
                         'priority': 'High',
                         'category': 'Scope 1 Reduction',
                         'recommendation': f'Focus on reducing {top_scope1_source} emissions through process optimization and equipment upgrades. Consider implementing carbon capture technology.',
-                        'potential_impact': 'Up to 15% reduction in Scope 1 emissions',
-                        'implementation_timeline': '12-18 months'
+                        'potential_impact': 'Up to 15% reduction in Scope 1 emissions'
                     })
 
             if not scope2_df.empty and 'Annual_Total' in scope2_df.columns:
@@ -658,8 +658,7 @@ class GHGReportGenerator:
                         'priority': 'Medium',
                         'category': 'Energy Transition',
                         'recommendation': 'Increase renewable energy procurement and implement energy efficiency measures. Consider on-site solar installations.',
-                        'potential_impact': 'Up to 25% reduction in Scope 2 emissions',
-                        'implementation_timeline': '6-12 months'
+                        'potential_impact': 'Up to 25% reduction in Scope 2 emissions'
                     })
 
             # Energy intensity analysis
@@ -671,8 +670,7 @@ class GHGReportGenerator:
                         'priority': 'Medium',
                         'category': 'Energy Efficiency',
                         'recommendation': 'Implement comprehensive energy management system (ISO 50001) and conduct energy audits at high-intensity facilities.',
-                        'potential_impact': 'Up to 10% improvement in energy intensity',
-                        'implementation_timeline': '3-6 months'
+                        'potential_impact': 'Up to 10% improvement in energy intensity'
                     })
 
             # Targets analysis
@@ -684,8 +682,7 @@ class GHGReportGenerator:
                         'priority': 'High',
                         'category': 'Target Achievement',
                         'recommendation': 'Develop accelerated action plans for underperforming metrics. Increase investment in emission reduction technologies.',
-                        'potential_impact': 'Meet 2024 targets',
-                        'implementation_timeline': '1-3 months'
+                        'potential_impact': 'Meet 2024 targets'
                     })
 
             # General recommendations
@@ -694,15 +691,13 @@ class GHGReportGenerator:
                     'priority': 'Medium',
                     'category': 'Technology Innovation',
                     'recommendation': 'Invest in emerging technologies such as hydrogen fuel, advanced biofuels, and carbon utilization for long-term emission reductions.',
-                    'potential_impact': 'Up to 30% reduction by 2030',
-                    'implementation_timeline': '24-36 months'
+                    'potential_impact': 'Up to 30% reduction by 2030'
                 },
                 {
                     'priority': 'Low',
                     'category': 'Reporting & Monitoring',
                     'recommendation': 'Implement real-time GHG monitoring systems and enhance data quality through automated data collection.',
-                    'potential_impact': 'Improved data accuracy and faster response times',
-                    'implementation_timeline': '6-9 months'
+                    'potential_impact': 'Improved data accuracy and faster response times'
                 }
             ])
 
@@ -710,6 +705,150 @@ class GHGReportGenerator:
             print(f"Error generating recommendations: {e}")
 
         return recommendations
+
+    def generate_ai_recommendations(self):
+        """Generate AI-powered recommendations using OpenAI GPT-5"""
+        if not self.data:
+            return []
+
+        try:
+            # Import openai here to avoid dependency if not used
+            from openai import OpenAI
+
+            # Check for API key
+            api_key = os.getenv('OPENAI_API_KEY')
+            if not api_key:
+                print("OpenAI API key not found. Falling back to rule-based recommendations.")
+                return self.generate_rule_based_recommendations()
+
+            # Prepare data summary
+            summary = self.get_summary_statistics()
+
+            # Get top emission sources
+            scope1_df = self.data.get('Scope 1 Emissions', pd.DataFrame())
+            scope2_df = self.data.get('Scope 2 Emissions', pd.DataFrame())
+            scope3_df = self.data.get('Scope 3 Emissions', pd.DataFrame())
+            emission_by_source = self.data.get('Emission By Source', pd.DataFrame())
+
+            # Top 3 sources from each scope
+            top_scope1 = []
+            if not scope1_df.empty and 'Annual_Total' in scope1_df.columns and 'Source' in scope1_df.columns:
+                top_scope1 = scope1_df.nlargest(3, 'Annual_Total')[['Source', 'Annual_Total']].to_dict('records')
+
+            top_scope2 = []
+            if not scope2_df.empty and 'Annual_Total' in scope2_df.columns and 'Source' in scope2_df.columns:
+                top_scope2 = scope2_df.nlargest(3, 'Annual_Total')[['Source', 'Annual_Total']].to_dict('records')
+
+            top_scope3 = []
+            if not scope3_df.empty and 'Annual_Total' in scope3_df.columns and 'Source' in scope3_df.columns:
+                top_scope3 = scope3_df.nlargest(3, 'Annual_Total')[['Source', 'Annual_Total']].to_dict('records')
+
+            top_energy = []
+            if not emission_by_source.empty and 'Annual_Total_tCO2e' in emission_by_source.columns and 'Source' in emission_by_source.columns:
+                top_energy = emission_by_source.nlargest(3, 'Annual_Total_tCO2e')[['Source', 'Annual_Total_tCO2e']].to_dict('records')
+
+            # Construct prompt for GPT-5
+            prompt = f"""You are a GHG emissions expert analyzing a petroleum company's emissions data. Based on the data below, generate 5-6 strategic recommendations following the GHG Protocol Corporate Standard and petroleum industry best practices.
+
+**Company Emissions Data:**
+- Total Emissions: {summary.get('total_emissions', 0):,.0f} tCO₂e
+- Scope 1 (Direct): {summary.get('scope1_total', 0):,.0f} tCO₂e ({summary.get('scope1_pct', 0):.1f}%)
+- Scope 2 (Energy): {summary.get('scope2_total', 0):,.0f} tCO₂e ({summary.get('scope2_pct', 0):.1f}%)
+- Scope 3 (Indirect): {summary.get('scope3_total', 0):,.0f} tCO₂e ({summary.get('scope3_pct', 0):.1f}%)
+- Carbon Intensity: {summary.get('carbon_intensity', 0):.4f} tCO₂e/barrel
+- Number of Facilities: {summary.get('total_facilities', 0)}
+
+**Top Scope 1 Emission Sources:**
+{json.dumps(top_scope1, indent=2) if top_scope1 else "No data available"}
+
+**Top Scope 2 Emission Sources:**
+{json.dumps(top_scope2, indent=2) if top_scope2 else "No data available"}
+
+**Top Scope 3 Emission Sources:**
+{json.dumps(top_scope3, indent=2) if top_scope3 else "No data available"}
+
+**Top Energy-Related Emission Sources:**
+{json.dumps(top_energy, indent=2) if top_energy else "No data available"}
+
+**Instructions:**
+1. Analyze the emission distribution and identify key reduction opportunities
+2. Provide 5-6 specific, actionable recommendations tailored to THIS company's data
+3. Assign priority based on impact potential and feasibility:
+   - "High": Critical reductions, quick wins, largest emission sources
+   - "Medium": Significant long-term impact, moderate complexity
+   - "Low": Incremental improvements, monitoring enhancements
+4. Include quantified potential impact where possible (be realistic based on the actual numbers)
+5. Consider petroleum industry context (refining, flaring, fugitive emissions, etc.)
+6. Focus on the LARGEST emission sources shown in the data
+
+**Output Format - Return ONLY valid JSON matching this structure:**
+{{
+  "recommendations": [
+    {{
+      "priority": "High",
+      "category": "Short descriptive category (e.g., 'Flare Gas Recovery', 'Energy Efficiency')",
+      "recommendation": "Detailed recommendation text (2-3 sentences) that references SPECIFIC sources from the data above",
+      "potential_impact": "Quantified impact based on actual data (e.g., 'Up to 20% reduction in Scope 1 emissions' or 'Estimated 5,000 tCO₂e annual reduction')"
+    }}
+  ]
+}}"""
+
+            # Call OpenAI API with GPT-5
+            client = OpenAI(api_key=api_key)
+
+            response = client.chat.completions.create(
+                model="gpt-5-mini",  # Using gpt-5-mini for cost-efficiency
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                reasoning_effort="minimal",  # User requested minimal reasoning
+                verbosity="medium",  # Medium verbosity for balanced output
+                max_completion_tokens=2000,  # Enough for 5-6 recommendations
+                response_format={"type": "json_object"}  # Force JSON output
+            )
+
+            # Parse response
+            result = json.loads(response.choices[0].message.content)
+            recommendations = result.get('recommendations', [])
+
+            # Validate recommendations structure
+            validated_recs = []
+            required_keys = ['priority', 'category', 'recommendation', 'potential_impact']
+
+            for rec in recommendations:
+                if all(k in rec for k in required_keys):
+                    # Ensure priority is capitalized correctly
+                    rec['priority'] = rec['priority'].capitalize()
+                    validated_recs.append(rec)
+
+            if validated_recs:
+                print(f"✅ Generated {len(validated_recs)} AI-powered recommendations using GPT-5")
+                return validated_recs
+            else:
+                print("❌ AI recommendations validation failed. Falling back to rule-based.")
+                return self.generate_rule_based_recommendations()
+
+        except Exception as e:
+            print(f"Error generating AI recommendations: {e}")
+            print("Falling back to rule-based recommendations.")
+            return self.generate_rule_based_recommendations()
+
+    def generate_recommendations(self, use_ai=False):
+        """Generate recommendations - AI or rule-based
+
+        Args:
+            use_ai (bool): If True and OPENAI_API_KEY is set, use GPT-5. Otherwise use rule-based.
+
+        Returns:
+            list: List of recommendation dictionaries
+        """
+        if use_ai:
+            return self.generate_ai_recommendations()
+        else:
+            return self.generate_rule_based_recommendations()
 
     def get_company_info(self):
         """Extract company information from Dashboard sheet"""

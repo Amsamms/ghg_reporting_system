@@ -9,17 +9,18 @@ class HTMLReportGenerator:
     def __init__(self, report_generator):
         self.report_gen = report_generator
 
-    def generate_html_report(self, output_path, facility_filter=None):
+    def generate_html_report(self, output_path, facility_filter=None, use_ai=False):
         """Generate interactive HTML report
 
         Args:
             output_path: Path to save HTML file
             facility_filter: Optional facility name to filter data
+            use_ai: If True, use AI-generated recommendations
         """
         try:
             # Get all charts and data with facility filtering
             charts = self._generate_all_charts(facility_filter)
-            recommendations = self.report_gen.generate_recommendations()
+            recommendations = self.report_gen.generate_recommendations(use_ai=use_ai)
             summary_stats = self.report_gen.get_summary_statistics(facility_filter)
 
             # Create HTML template
@@ -502,8 +503,7 @@ class HTMLReportGenerator:
                         <h4>{{ rec.category }}</h4>
                         <p>{{ rec.recommendation }}</p>
                         <div style="margin-top: 1rem;">
-                            <strong>Potential Impact:</strong> {{ rec.potential_impact }}<br>
-                            <strong>Implementation Timeline:</strong> {{ rec.implementation_timeline }}
+                            <strong>Potential Impact:</strong> {{ rec.potential_impact }}
                         </div>
                     </div>
                     {% endfor %}

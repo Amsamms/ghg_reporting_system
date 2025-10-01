@@ -52,8 +52,16 @@ class SimplePDFReportGenerator:
             borderPadding=10
         ))
 
-    def generate_simple_pdf_report(self, output_path):
-        """Generate comprehensive PDF report with detailed information"""
+    def generate_simple_pdf_report(self, output_path, use_ai=False):
+        """Generate comprehensive PDF report with detailed information
+
+        Args:
+            output_path: Path to save PDF file
+            use_ai: If True, use AI-generated recommendations
+        """
+        # Store use_ai in instance variable for use in _create_recommendations
+        self.use_ai = use_ai
+
         doc = SimpleDocTemplate(
             output_path,
             pagesize=A4,
@@ -292,7 +300,7 @@ class SimplePDFReportGenerator:
         story.append(Paragraph("Strategic Recommendations", self.styles['Heading1']))
         story.append(Spacer(1, 12))
 
-        recommendations = self.report_gen.generate_recommendations()
+        recommendations = self.report_gen.generate_recommendations(use_ai=getattr(self, 'use_ai', False))
 
         if recommendations:
             for i, rec in enumerate(recommendations[:5], 1):  # Show top 5 recommendations
@@ -300,7 +308,6 @@ class SimplePDFReportGenerator:
                 <b>{i}. {rec.get('category', 'N/A')} ({rec.get('priority', 'Medium')} Priority)</b><br/>
                 {rec.get('recommendation', 'N/A')}<br/>
                 <i>Potential Impact:</i> {rec.get('potential_impact', 'N/A')}<br/>
-                <i>Timeline:</i> {rec.get('implementation_timeline', 'N/A')}<br/>
                 """
                 story.append(Paragraph(rec_text, self.styles['HighlightBox']))
                 story.append(Spacer(1, 10))
