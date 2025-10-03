@@ -379,8 +379,10 @@ class HTMLReportGenerator:
     <div class="container">
         <header class="header">
             {% if logo_base64 %}
-            <div style="text-align: center; margin-bottom: 1rem;">
-                <img src="{{ logo_base64 }}" alt="EPROM Logo" style="max-width: 300px; height: auto;">
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+                <div style="display: inline-block; background: white; padding: 15px 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <img src="{{ logo_base64 }}" alt="EPROM Logo" style="max-width: 300px; height: auto; display: block;">
+                </div>
             </div>
             {% endif %}
             <h1><i class="fas fa-leaf"></i> EPROM GHG Emissions Report</h1>
