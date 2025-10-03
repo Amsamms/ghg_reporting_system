@@ -28,17 +28,18 @@ class HTMLReportGenerator:
             print(f"Error loading logo: {e}")
         return None
 
-    def generate_html_report(self, output_path, facility_filter=None, use_ai=False):
+    def generate_html_report(self, output_path, facility_filter=None, use_ai=False, pdf_mode=False):
         """Generate interactive HTML report
 
         Args:
             output_path: Path to save HTML file
             facility_filter: Optional facility name to filter data
             use_ai: If True, use AI-generated recommendations
+            pdf_mode: If True, use static images instead of interactive charts (for PDF)
         """
         try:
             # Get all charts and data with facility filtering
-            charts = self._generate_all_charts(facility_filter)
+            charts = self._generate_all_charts(facility_filter, static=pdf_mode)
             recommendations = self.report_gen.generate_recommendations(use_ai=use_ai)
             summary_stats = self.report_gen.get_summary_statistics(facility_filter)
             logo_base64 = self._get_logo_base64()
@@ -55,6 +56,7 @@ class HTMLReportGenerator:
                 summary_stats=summary_stats,
                 logo_base64=logo_base64,
                 custom_text=custom_text,
+                pdf_mode=pdf_mode,
                 report_date=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             )
 
@@ -67,44 +69,72 @@ class HTMLReportGenerator:
             print(f"Error generating HTML report: {e}")
             return False
 
-    def _generate_all_charts(self, facility_filter=None):
-        """Generate all charts as HTML divs
+    def _fig_to_base64_image(self, fig, width=1200, height=600):
+        """Convert Plotly figure to base64 PNG image using Kaleido"""
+        try:
+            # Convert to PNG bytes using Kaleido
+            img_bytes = fig.to_image(format="png", width=width, height=height, scale=2)
+            # Encode to base64
+            img_base64 = base64.b64encode(img_bytes).decode('utf-8')
+            return f'data:image/png;base64,{img_base64}'
+        except Exception as e:
+            print(f"Error converting figure to image: {e}")
+            return None
+
+    def _generate_all_charts(self, facility_filter=None, static=False):
+        """Generate all charts as HTML divs or static images
 
         Args:
             facility_filter: Optional facility name to filter data
+            static: If True, return base64-encoded PNG images; if False, return interactive HTML
         """
         charts = {}
 
         # Scope comparison chart
         scope_chart = self.report_gen.create_scope_comparison_chart(facility_filter)
         if scope_chart:
-            charts['scope_comparison'] = plotly.io.to_html(scope_chart, include_plotlyjs=False, div_id="scope-comparison-chart", config={'displayModeBar': True})
+            if static:
+                charts['scope_comparison'] = self._fig_to_base64_image(scope_chart)
+            else:
+                charts['scope_comparison'] = plotly.io.to_html(scope_chart, include_plotlyjs=False, div_id="scope-comparison-chart", config={'displayModeBar': True})
 
         # Monthly trend chart
         trend_chart = self.report_gen.create_monthly_trend_chart(facility_filter)
         if trend_chart:
-            charts['monthly_trend'] = plotly.io.to_html(trend_chart, include_plotlyjs=False, div_id="monthly-trend-chart", config={'displayModeBar': True})
+            if static:
+                charts['monthly_trend'] = self._fig_to_base64_image(trend_chart, width=1400, height=500)
+            else:
+                charts['monthly_trend'] = plotly.io.to_html(trend_chart, include_plotlyjs=False, div_id="monthly-trend-chart", config={'displayModeBar': True})
 
         # Sankey diagram - with proper configuration for better rendering
         # Using threshold_percent=80 as default
         sankey_chart = self.report_gen.create_sankey_diagram(facility_filter, threshold_percent=80)
         if sankey_chart:
-            charts['sankey'] = plotly.io.to_html(
-                sankey_chart,
-                include_plotlyjs=False,
-                div_id="sankey-chart",
-                config={'displayModeBar': True, 'responsive': True}
-            )
+            if static:
+                charts['sankey'] = self._fig_to_base64_image(sankey_chart, width=1400, height=700)
+            else:
+                charts['sankey'] = plotly.io.to_html(
+                    sankey_chart,
+                    include_plotlyjs=False,
+                    div_id="sankey-chart",
+                    config={'displayModeBar': True, 'responsive': True}
+                )
 
         # Facility breakdown
         facility_chart = self.report_gen.create_facility_breakdown_chart()
         if facility_chart:
-            charts['facility_breakdown'] = plotly.io.to_html(facility_chart, include_plotlyjs=False, div_id="facility-chart", config={'displayModeBar': True})
+            if static:
+                charts['facility_breakdown'] = self._fig_to_base64_image(facility_chart)
+            else:
+                charts['facility_breakdown'] = plotly.io.to_html(facility_chart, include_plotlyjs=False, div_id="facility-chart", config={'displayModeBar': True})
 
         # Emission By Source
         emission_chart = self.report_gen.create_emission_by_source_chart()
         if emission_chart:
-            charts['emission_by_source'] = plotly.io.to_html(emission_chart, include_plotlyjs=False, div_id="emission-chart", config={'displayModeBar': True})
+            if static:
+                charts['emission_by_source'] = self._fig_to_base64_image(emission_chart)
+            else:
+                charts['emission_by_source'] = plotly.io.to_html(emission_chart, include_plotlyjs=False, div_id="emission-chart", config={'displayModeBar': True})
 
         return charts
 
@@ -535,21 +565,33 @@ class HTMLReportGenerator:
                 {% if charts.scope_comparison %}
                 <div class="chart-container">
                     <h3>Emissions by Scope</h3>
+                    {% if pdf_mode %}
+                    <img src="{{ charts.scope_comparison }}" style="width: 100%; height: auto; display: block;">
+                    {% else %}
                     {{ charts.scope_comparison | safe }}
+                    {% endif %}
                 </div>
                 {% endif %}
 
                 {% if charts.monthly_trend %}
                 <div class="chart-container">
                     <h3>Monthly Emission Trends</h3>
+                    {% if pdf_mode %}
+                    <img src="{{ charts.monthly_trend }}" style="width: 100%; height: auto; display: block;">
+                    {% else %}
                     {{ charts.monthly_trend | safe }}
+                    {% endif %}
                 </div>
                 {% endif %}
 
                 {% if charts.sankey %}
                 <div class="chart-container">
                     <h3>Emission Flow Analysis (Sankey Diagram)</h3>
+                    {% if pdf_mode %}
+                    <img src="{{ charts.sankey }}" style="width: 100%; height: auto; display: block;">
+                    {% else %}
                     {{ charts.sankey | safe }}
+                    {% endif %}
                 </div>
                 {% endif %}
 
@@ -569,7 +611,11 @@ class HTMLReportGenerator:
                 {% if charts.facility_breakdown %}
                 <div class="chart-container">
                     <h3>Facility-wise Breakdown</h3>
+                    {% if pdf_mode %}
+                    <img src="{{ charts.facility_breakdown }}" style="width: 100%; height: auto; display: block;">
+                    {% else %}
                     {{ charts.facility_breakdown | safe }}
+                    {% endif %}
                 </div>
                 {% endif %}
 
@@ -585,7 +631,11 @@ class HTMLReportGenerator:
                 {% if charts.emission_by_source %}
                 <div class="chart-container">
                     <h3>Emission Distribution and Analysis</h3>
+                    {% if pdf_mode %}
+                    <img src="{{ charts.emission_by_source }}" style="width: 100%; height: auto; display: block;">
+                    {% else %}
                     {{ charts.emission_by_source | safe }}
+                    {% endif %}
                 </div>
                 {% endif %}
 

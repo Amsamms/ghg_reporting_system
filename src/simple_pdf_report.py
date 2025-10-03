@@ -25,8 +25,8 @@ class SimplePDFReportGenerator:
             with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as tmp_html:
                 tmp_html_path = tmp_html.name
 
-            # Generate HTML report first
-            if not self.html_gen.generate_html_report(tmp_html_path, facility_filter=None, use_ai=use_ai):
+            # Generate HTML report first (with pdf_mode=True for static charts)
+            if not self.html_gen.generate_html_report(tmp_html_path, facility_filter=None, use_ai=use_ai, pdf_mode=True):
                 print("Failed to generate HTML template")
                 return False
 
