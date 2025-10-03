@@ -1,14 +1,15 @@
 # PDF Generation Setup
 
-The GHG Reporting System uses **Playwright** with **Chromium** to convert the beautiful HTML reports to PDF format.
+The GHG Reporting System uses **WeasyPrint** to convert HTML reports to PDF format.
 
-## Why Playwright?
+## Why WeasyPrint?
 
-✅ **Perfect Rendering** - Uses real Chromium browser (same as Chrome)
-✅ **CSS Grid Support** - Full support for modern CSS
-✅ **Chart Quality** - Plotly charts render perfectly
-✅ **No Manual Fixes** - Respects all CSS page-break rules
-✅ **Exact Match** - PDF looks identical to browser print preview
+✅ **Pure Python** - No browser dependencies, easier deployment
+✅ **Works on Streamlit Cloud** - Confirmed working with simple setup
+✅ **Good CSS Support** - Handles most modern CSS (Grid, Flexbox, gradients)
+✅ **Small File Size** - ~180 KB PDFs (vs 3.5 MB with wkhtmltopdf)
+✅ **Fast** - Quick conversion without browser overhead
+✅ **Reliable** - No browser installation issues
 
 ## Requirements
 
@@ -20,48 +21,42 @@ All dependencies are in `requirements.txt`:
 pip install -r requirements.txt
 ```
 
-### Install Playwright Browsers
+### System Dependencies (Streamlit Cloud)
 
-After installing the package, install Chromium:
+For Streamlit Cloud deployment, add "weasyprint" to `packages.txt`:
 
-```bash
-playwright install chromium
+```
+weasyprint
 ```
 
-Or with dependencies:
-
-```bash
-playwright install --with-deps chromium
-```
+This installs the necessary system libraries (Pango, Cairo, etc.).
 
 ## How It Works
 
-1. Generate beautiful HTML report with interactive charts
-2. Launch headless Chromium browser via Playwright
-3. Load HTML and wait for charts to render (2 seconds)
-4. Convert to PDF using Chromium's native print function
-5. All CSS Grid, Flexbox, gradients preserved perfectly
+1. Generate beautiful HTML report with Plotly charts (as static images)
+2. Use WeasyPrint to convert HTML to PDF
+3. All CSS styling, gradients, layouts preserved
+4. Page breaks respected (`page-break-inside: avoid`)
 
 ## Features
 
 - ✅ Identical styling to HTML report
-- ✅ All charts embedded perfectly (no quality loss)
-- ✅ Proper page breaks (respects CSS page-break-inside: avoid)
+- ✅ All charts embedded as images
+- ✅ Proper page breaks (CSS page-break rules)
 - ✅ Company logo included
 - ✅ Custom introduction and conclusion text
-- ✅ KPI cards display in grid layout (3 per row)
 - ✅ Landscape orientation for better data visualization
-- ✅ Smaller file size (1.5 MB vs 3.5 MB)
+- ✅ Small file size (~180 KB)
+- ✅ Fast generation
 
 ## Streamlit Cloud Deployment
 
 The system is configured for Streamlit Cloud:
 
-1. **packages.txt** - System dependencies for Chromium
-2. **.streamlit/packages.txt** - Post-install script for Playwright browsers
-3. **requirements.txt** - Python packages including Playwright
+1. **packages.txt** - System package: `weasyprint`
+2. **requirements.txt** - Python package: `weasyprint==66.0`
 
-Playwright browsers will be installed automatically during deployment.
+WeasyPrint will work automatically on deployment.
 
 ## Local Testing
 
@@ -82,26 +77,29 @@ pdf_gen = SimplePDFReportGenerator(report_gen)
 pdf_gen.generate_simple_pdf_report('output.pdf')
 ```
 
+## Comparison: PDF Generation Libraries
+
+| Feature | wkhtmltopdf | Playwright | WeasyPrint |
+|---------|-------------|------------|------------|
+| Deployment | ❌ Complex | ❌ Very Complex | ✅ Simple |
+| CSS Grid | ❌ Broken | ✅ Perfect | ✅ Good |
+| CSS Flexbox | ⚠️ Partial | ✅ Perfect | ✅ Good |
+| File Size | 3.5+ MB | ~1.5 MB | ~180 KB |
+| Speed | Medium | Slow | Fast |
+| Dependencies | System binary | Browser + System | Python only |
+| Streamlit Cloud | ⚠️ Works | ❌ Fails | ✅ Works |
+
 ## Troubleshooting
 
-If Playwright browsers are not installed:
-```bash
-playwright install chromium
-```
+If you get errors on Streamlit Cloud:
+1. Ensure `weasyprint` is in `packages.txt`
+2. Ensure `weasyprint==66.0` is in `requirements.txt`
+3. Redeploy the app
 
-If you get errors about missing dependencies on Linux:
-```bash
-playwright install --with-deps chromium
-```
+## Limitations
 
-## Comparison: Playwright vs wkhtmltopdf
+- **No JavaScript**: Charts must be static images (Plotly renders as static in HTML)
+- **Limited CSS3**: Some advanced CSS features may not work
+- **Font limitations**: System fonts only
 
-| Feature | wkhtmltopdf | Playwright |
-|---------|-------------|------------|
-| CSS Grid | ❌ Broken | ✅ Perfect |
-| CSS Flexbox | ⚠️ Partial | ✅ Perfect |
-| Modern CSS | ❌ Limited | ✅ Full Support |
-| Chart Quality | ⚠️ Poor | ✅ Perfect |
-| Page Breaks | ⚠️ Partial | ✅ Perfect |
-| File Size | 3.5+ MB | ~1.5 MB |
-| Browser Engine | Old WebKit | Chromium (Chrome) |
+These limitations don't affect our use case since we use static Plotly charts embedded in HTML.
