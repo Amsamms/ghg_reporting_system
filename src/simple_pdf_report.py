@@ -1,4 +1,4 @@
-import pdfkit
+from playwright.sync_api import sync_playwright
 import tempfile
 import os
 from datetime import datetime
@@ -11,7 +11,7 @@ class SimplePDFReportGenerator:
         self.html_gen = HTMLReportGenerator(report_generator)
 
     def generate_simple_pdf_report(self, output_path, use_ai=False):
-        """Generate PDF report from HTML template using pdfkit
+        """Generate PDF report from HTML template using Playwright
 
         Args:
             output_path: Path to save PDF file
@@ -30,35 +30,33 @@ class SimplePDFReportGenerator:
                 print("Failed to generate HTML template")
                 return False
 
-            # Read HTML content
-            with open(tmp_html_path, 'r', encoding='utf-8') as f:
-                html_content = f.read()
+            # Use Playwright to convert HTML to PDF
+            with sync_playwright() as p:
+                # Launch Chromium browser
+                browser = p.chromium.launch(headless=True)
+                page = browser.new_page()
 
-            # Configure pdfkit options for better PDF output
-            # For landscape A4: ~297mm width × 210mm height
-            # Set viewport width to match landscape dimensions
-            options = {
-                'page-size': 'A4',
-                'orientation': 'Landscape',
-                'margin-top': '0.5in',
-                'margin-right': '0.5in',
-                'margin-bottom': '0.5in',
-                'margin-left': '0.5in',
-                'encoding': 'UTF-8',
-                'no-outline': None,
-                'enable-local-file-access': None,
-                'print-media-type': None,
-                'javascript-delay': 1000,
-                'no-stop-slow-scripts': None,
-                'debug-javascript': None,
-                'load-error-handling': 'ignore',
-                'load-media-error-handling': 'ignore',
-                'viewport-size': '1920x1080',  # Wider viewport for landscape
-                'zoom': 1.0
-            }
+                # Load the HTML file
+                page.goto(f'file://{tmp_html_path}')
 
-            # Generate PDF from HTML
-            pdfkit.from_file(tmp_html_path, output_path, options=options)
+                # Wait for charts to render (Plotly needs time)
+                page.wait_for_timeout(2000)
+
+                # Generate PDF with Chromium
+                page.pdf(
+                    path=output_path,
+                    format='A4',
+                    landscape=True,
+                    print_background=True,
+                    margin={
+                        'top': '0.5in',
+                        'right': '0.5in',
+                        'bottom': '0.5in',
+                        'left': '0.5in'
+                    }
+                )
+
+                browser.close()
 
             # Clean up temporary HTML file
             os.unlink(tmp_html_path)
