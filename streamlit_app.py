@@ -83,7 +83,17 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def main():
-    # App Header
+    # App Header with Logo
+    # Get the directory where this script is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    logo_path = os.path.join(script_dir, "assets", "epromlogo-scaled.gif")
+
+    # Display logo
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if os.path.exists(logo_path):
+            st.image(logo_path, use_container_width=True)
+
     st.markdown("""
     <div class="main-header">
         <h1>EPROM 🌱 Professional GHG Reporting System</h1>

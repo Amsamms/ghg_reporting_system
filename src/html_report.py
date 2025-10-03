@@ -2,12 +2,31 @@ import plotly
 import plotly.graph_objects as go
 from jinja2 import Template
 import json
+import base64
+import os
 from datetime import datetime
 from report_generator import GHGReportGenerator
 
 class HTMLReportGenerator:
     def __init__(self, report_generator):
         self.report_gen = report_generator
+
+    def _get_logo_base64(self):
+        """Convert logo to base64 for embedding in HTML"""
+        # Get the directory where this script is located (src/)
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        # Go up one level to ghg_reporting_system/ then into assets/
+        logo_path = os.path.join(script_dir, "..", "assets", "epromlogo-scaled.gif")
+        logo_path = os.path.normpath(logo_path)  # Normalize the path
+
+        try:
+            if os.path.exists(logo_path):
+                with open(logo_path, 'rb') as f:
+                    logo_data = base64.b64encode(f.read()).decode('utf-8')
+                    return f"data:image/gif;base64,{logo_data}"
+        except Exception as e:
+            print(f"Error loading logo: {e}")
+        return None
 
     def generate_html_report(self, output_path, facility_filter=None, use_ai=False):
         """Generate interactive HTML report
@@ -22,6 +41,7 @@ class HTMLReportGenerator:
             charts = self._generate_all_charts(facility_filter)
             recommendations = self.report_gen.generate_recommendations(use_ai=use_ai)
             summary_stats = self.report_gen.get_summary_statistics(facility_filter)
+            logo_base64 = self._get_logo_base64()
 
             # Create HTML template
             html_template = self._create_html_template()
@@ -32,6 +52,7 @@ class HTMLReportGenerator:
                 charts=charts,
                 recommendations=recommendations,
                 summary_stats=summary_stats,
+                logo_base64=logo_base64,
                 report_date=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             )
 
@@ -357,6 +378,11 @@ class HTMLReportGenerator:
 <body>
     <div class="container">
         <header class="header">
+            {% if logo_base64 %}
+            <div style="text-align: center; margin-bottom: 1rem;">
+                <img src="{{ logo_base64 }}" alt="EPROM Logo" style="max-width: 300px; height: auto;">
+            </div>
+            {% endif %}
             <h1><i class="fas fa-leaf"></i> EPROM GHG Emissions Report</h1>
             <p>{{ summary_stats.company_name }} - Comprehensive Environmental Assessment</p>
             <small>Generated on {{ report_date }}</small>
