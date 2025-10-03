@@ -402,9 +402,18 @@ class HTMLReportGenerator:
                 margin: 1rem 0;
             }
 
+            /* Fix KPI grid for wkhtmltopdf - use flexbox instead of grid */
             .kpi-grid {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 1rem !important;
                 page-break-inside: avoid;
-                gap: 1rem;
+            }
+
+            .kpi-card {
+                flex: 1 1 calc(33.333% - 1rem) !important;
+                min-width: 200px !important;
+                max-width: calc(33.333% - 1rem) !important;
             }
 
             .recommendation-card {
