@@ -382,6 +382,11 @@ class HTMLReportGenerator:
                 background: white;
             }
 
+            .container {
+                max-width: 100% !important;
+                width: 100% !important;
+            }
+
             .scroll-to-top {
                 display: none !important;
             }
@@ -399,6 +404,7 @@ class HTMLReportGenerator:
 
             .kpi-grid {
                 page-break-inside: avoid;
+                gap: 1rem;
             }
 
             .recommendation-card {

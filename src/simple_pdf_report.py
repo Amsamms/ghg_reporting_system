@@ -35,9 +35,11 @@ class SimplePDFReportGenerator:
                 html_content = f.read()
 
             # Configure pdfkit options for better PDF output
+            # For landscape A4: ~297mm width × 210mm height
+            # Set viewport width to match landscape dimensions
             options = {
                 'page-size': 'A4',
-                'orientation': 'Landscape',  # Landscape for better chart display
+                'orientation': 'Landscape',
                 'margin-top': '0.5in',
                 'margin-right': '0.5in',
                 'margin-bottom': '0.5in',
@@ -45,12 +47,14 @@ class SimplePDFReportGenerator:
                 'encoding': 'UTF-8',
                 'no-outline': None,
                 'enable-local-file-access': None,
-                'print-media-type': None,  # Use print CSS
-                'javascript-delay': 1000,  # Wait for charts to render
+                'print-media-type': None,
+                'javascript-delay': 1000,
                 'no-stop-slow-scripts': None,
                 'debug-javascript': None,
                 'load-error-handling': 'ignore',
-                'load-media-error-handling': 'ignore'
+                'load-media-error-handling': 'ignore',
+                'viewport-size': '1920x1080',  # Wider viewport for landscape
+                'zoom': 1.0
             }
 
             # Generate PDF from HTML
