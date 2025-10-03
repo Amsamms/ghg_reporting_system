@@ -325,12 +325,36 @@ def show_manual_input_page():
         report_date = st.date_input("Report Date", value=date.today())
         num_facilities = st.number_input("Number of Facilities", value=2, min_value=1, max_value=10)
 
+    st.markdown("---")
+
+    # Custom Report Text Section
+    st.subheader("📝 Custom Report Text (Optional)")
+    st.info("Add custom text to personalize your HTML report. Leave empty to skip these sections.")
+
+    company_introduction = st.text_area(
+        "Company Introduction (appears at the beginning of the report)",
+        value="",
+        height=150,
+        placeholder="Example: Company A is specialized in refining operations. It has been established since 1995 and operates multiple facilities across the region...",
+        help="This text will appear in the Executive Overview section of the HTML report"
+    )
+
+    conclusion_text = st.text_area(
+        "Conclusion & Final Notes (appears at the end of the report)",
+        value="",
+        height=150,
+        placeholder="Example: The company is committed to reducing emissions by 30% by 2030. Further investments in renewable energy and carbon capture technologies are planned...",
+        help="This text will appear at the end of the HTML report, before the footer"
+    )
+
     # Store company info
     st.session_state.company_info = {
         'name': company_name,
         'reporting_year': reporting_year,
         'report_date': report_date.strftime('%Y-%m-%d'),
-        'num_facilities': num_facilities
+        'num_facilities': num_facilities,
+        'company_introduction': company_introduction.strip(),
+        'conclusion_text': conclusion_text.strip()
     }
 
     st.markdown("---")
@@ -961,6 +985,16 @@ def create_manual_excel(filepath, data):
             {'Metric': 'Total GHG Reduction Target (%)', 'Target_2024': 5, 'Actual_2024': 3.2, 'Status': 'On Track'}
         ])
         targets_data.to_excel(writer, sheet_name='Targets & Performance', index=False)
+
+        # Custom Text sheet
+        company_intro = company_info.get('company_introduction', '')
+        conclusion = company_info.get('conclusion_text', '')
+        custom_text_data = pd.DataFrame([
+            ['Field', 'Content'],
+            ['Company Introduction', company_intro],
+            ['Conclusion', conclusion]
+        ])
+        custom_text_data.to_excel(writer, sheet_name='Custom Text', index=False, header=False)
 
 def show_reports_page():
     """Page for generating reports"""

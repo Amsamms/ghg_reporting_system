@@ -183,6 +183,14 @@ class GHGExcelGenerator:
             ])
             targets_data.to_excel(writer, sheet_name='Targets & Performance', index=False)
 
+            # Custom Text Sheet
+            custom_text_data = pd.DataFrame([
+                ['Field', 'Content'],
+                ['Company Introduction', 'Example: Company A is specialized in refining operations. It has been established since 1995 and operates multiple facilities across the region...'],
+                ['Conclusion', 'Example: The company is committed to reducing emissions by 30% by 2030. Further investments in renewable energy and carbon capture technologies are planned...']
+            ])
+            custom_text_data.to_excel(writer, sheet_name='Custom Text', index=False, header=False)
+
         # Format the Excel file
         self._format_excel_file(filename)
         return filename

@@ -23,6 +23,31 @@ class GHGReportGenerator:
             print(f"Error loading Excel file: {e}")
             return None
 
+    def get_custom_text(self):
+        """Extract custom text from Custom Text sheet"""
+        custom_text = {
+            'company_introduction': '',
+            'conclusion_text': ''
+        }
+
+        try:
+            if self.data and 'Custom Text' in self.data:
+                df = self.data['Custom Text']
+                # The sheet has format: [Field, Content] in columns
+                for idx, row in df.iterrows():
+                    if len(row) >= 2:
+                        field = str(row.iloc[0]).strip()
+                        content = str(row.iloc[1]).strip()
+
+                        if 'Company Introduction' in field:
+                            custom_text['company_introduction'] = content
+                        elif 'Conclusion' in field:
+                            custom_text['conclusion_text'] = content
+        except Exception as e:
+            print(f"Error loading custom text: {e}")
+
+        return custom_text
+
     def _apply_threshold_to_sources(self, df, threshold_percent):
         """Apply threshold to sources and group remaining as 'Others'
 

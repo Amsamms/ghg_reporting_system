@@ -42,6 +42,7 @@ class HTMLReportGenerator:
             recommendations = self.report_gen.generate_recommendations(use_ai=use_ai)
             summary_stats = self.report_gen.get_summary_statistics(facility_filter)
             logo_base64 = self._get_logo_base64()
+            custom_text = self.report_gen.get_custom_text()
 
             # Create HTML template
             html_template = self._create_html_template()
@@ -53,6 +54,7 @@ class HTMLReportGenerator:
                 recommendations=recommendations,
                 summary_stats=summary_stats,
                 logo_base64=logo_base64,
+                custom_text=custom_text,
                 report_date=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             )
 
@@ -405,6 +407,13 @@ class HTMLReportGenerator:
             <section id="overview" class="section">
                 <h2><i class="fas fa-chart-line"></i> Executive Overview of {{ summary_stats.company_name }}</h2>
 
+                {% if custom_text.company_introduction and custom_text.company_introduction != 'nan' and custom_text.company_introduction|length > 0 %}
+                <div class="highlight" style="background: linear-gradient(120deg, #e0f7fa 0%, #b2ebf2 100%); margin-bottom: 2rem;">
+                    <h3><i class="fas fa-building"></i> About {{ summary_stats.company_name }}</h3>
+                    <p style="white-space: pre-line; line-height: 1.8; text-align: justify;">{{ custom_text.company_introduction }}</p>
+                </div>
+                {% endif %}
+
                 <div class="kpi-grid">
                     <div class="kpi-card">
                         <i class="fas fa-smog"></i>
@@ -590,6 +599,15 @@ class HTMLReportGenerator:
                     <p>All Scope 1 and Scope 2 emissions have been internally verified. Selected Scope 3 categories have undergone limited external assurance. The report follows international best practices for GHG data management and quality assurance.</p>
                 </div>
             </section>
+
+            {% if custom_text.conclusion_text and custom_text.conclusion_text != 'nan' and custom_text.conclusion_text|length > 0 %}
+            <section id="conclusion" class="section">
+                <h2><i class="fas fa-flag-checkered"></i> Conclusion & Final Notes</h2>
+                <div class="highlight" style="background: linear-gradient(120deg, #fff9c4 0%, #fff59d 100%);">
+                    <p style="white-space: pre-line; line-height: 1.8; text-align: justify; font-size: 1.05rem;">{{ custom_text.conclusion_text }}</p>
+                </div>
+            </section>
+            {% endif %}
         </div>
 
         <footer class="footer">
