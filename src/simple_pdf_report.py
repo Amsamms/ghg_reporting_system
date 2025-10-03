@@ -37,6 +37,7 @@ class SimplePDFReportGenerator:
             # Configure pdfkit options for better PDF output
             options = {
                 'page-size': 'A4',
+                'orientation': 'Landscape',  # Landscape for better chart display
                 'margin-top': '0.5in',
                 'margin-right': '0.5in',
                 'margin-bottom': '0.5in',
