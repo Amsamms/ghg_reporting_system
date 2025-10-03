@@ -375,6 +375,56 @@ class HTMLReportGenerator:
         .scroll-to-top:hover {
             background: #1B4F72;
         }
+
+        /* Print-specific CSS for PDF generation */
+        @media print {
+            body {
+                background: white;
+            }
+
+            .scroll-to-top {
+                display: none !important;
+            }
+
+            .section {
+                page-break-inside: avoid;
+                margin-bottom: 1rem;
+            }
+
+            .chart-container {
+                page-break-inside: avoid;
+                page-break-after: auto;
+                margin: 1rem 0;
+            }
+
+            .kpi-grid {
+                page-break-inside: avoid;
+            }
+
+            .recommendation-card {
+                page-break-inside: avoid;
+            }
+
+            .methodology {
+                page-break-inside: avoid;
+            }
+
+            h2 {
+                page-break-after: avoid;
+            }
+
+            .header {
+                page-break-after: avoid;
+            }
+
+            .nav {
+                display: none;
+            }
+
+            .footer {
+                page-break-before: auto;
+            }
+        }
     </style>
 </head>
 <body>
