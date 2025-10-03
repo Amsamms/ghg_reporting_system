@@ -10,16 +10,32 @@ from html_report import HTMLReportGenerator
 def ensure_playwright_browsers():
     """Install Playwright browsers if not already installed"""
     try:
-        # Check if chromium is installed
-        from playwright._impl._driver import compute_driver_executable
-        driver_executable = compute_driver_executable()
-        # Try to get browser, if fails then install
-        subprocess.run([driver_executable, "install", "chromium"],
-                      capture_output=True, check=False)
-    except:
-        pass
+        import sys
+        import pathlib
 
-# Install browsers on module import
+        # Check if chromium is already installed
+        playwright_cache = pathlib.Path.home() / ".cache" / "ms-playwright"
+        if playwright_cache.exists() and list(playwright_cache.glob("chromium*")):
+            # Browsers already installed, skip
+            return
+
+        print("Installing Playwright browsers (first run only)...")
+        # Run playwright install command with dependencies
+        result = subprocess.run(
+            [sys.executable, "-m", "playwright", "install", "--with-deps", "chromium"],
+            capture_output=True,
+            text=True,
+            timeout=300  # 5 minute timeout
+        )
+        if result.returncode == 0:
+            print("✓ Playwright browsers installed successfully")
+        else:
+            print(f"Playwright install output: {result.stdout}")
+            print(f"Playwright install errors: {result.stderr}")
+    except Exception as e:
+        print(f"Error installing Playwright browsers: {e}")
+
+# Install browsers on module import (only once)
 ensure_playwright_browsers()
 
 class SimplePDFReportGenerator:
