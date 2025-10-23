@@ -319,7 +319,7 @@ def show_manual_input_page():
 
     with col1:
         company_name = st.text_input("Company Name", value="Your Company Name")
-        reporting_year = st.number_input("Reporting Year", value=2024, min_value=2020, max_value=2030)
+        reporting_year = st.number_input("Reporting Year", value=2025, min_value=2020, max_value=2030)
 
     with col2:
         report_date = st.date_input("Report Date", value=date.today())
@@ -339,8 +339,15 @@ def show_manual_input_page():
         help="This text will appear in the Executive Overview section of the HTML report"
     )
 
+    conclusion_title = st.text_input(
+        "Conclusion Section Title",
+        value="Conclusion & Final Notes",
+        placeholder="Example: Final Remarks, Summary & Outlook, etc.",
+        help="Customize the heading for the conclusion section of the HTML report"
+    )
+
     conclusion_text = st.text_area(
-        "Conclusion & Final Notes (appears at the end of the report)",
+        "Conclusion Section Content (appears at the end of the report)",
         value="",
         height=150,
         placeholder="Example: The company is committed to reducing emissions by 30% by 2030. Further investments in renewable energy and carbon capture technologies are planned...",
@@ -354,6 +361,7 @@ def show_manual_input_page():
         'report_date': report_date.strftime('%Y-%m-%d'),
         'num_facilities': num_facilities,
         'company_introduction': company_introduction.strip(),
+        'conclusion_title': conclusion_title.strip() if conclusion_title.strip() else 'Conclusion & Final Notes',
         'conclusion_text': conclusion_text.strip()
     }
 
@@ -953,7 +961,7 @@ def create_manual_excel(filepath, data):
         company_info = st.session_state.company_info
         summary_data = pd.DataFrame([
             ['Company Name', company_info.get('name', 'Your Company')],
-            ['Reporting Year', company_info.get('reporting_year', 2024)],
+            ['Reporting Year', company_info.get('reporting_year', 2025)],
             ['Report Date', company_info.get('report_date', datetime.now().strftime('%Y-%m-%d'))],
             ['Total GHG Emissions (tCO2e)', f"{data['totals']['grand_total']:.2f}"],
             ['Scope 1 Emissions (tCO2e)', f"{data['totals']['scope1_total']:.2f}"],
@@ -988,10 +996,12 @@ def create_manual_excel(filepath, data):
 
         # Custom Text sheet
         company_intro = company_info.get('company_introduction', '')
+        conclusion_title = company_info.get('conclusion_title', 'Conclusion & Final Notes')
         conclusion = company_info.get('conclusion_text', '')
         custom_text_data = pd.DataFrame([
             ['Field', 'Content'],
             ['Company Introduction', company_intro],
+            ['Conclusion Title', conclusion_title],
             ['Conclusion', conclusion]
         ])
         custom_text_data.to_excel(writer, sheet_name='Custom Text', index=False, header=False)
@@ -1452,7 +1462,7 @@ def create_blank_template():
         # Create template with minimal data
         excel_gen.company_info = {
             'name': '[Your Company Name]',
-            'reporting_year': 2024,
+            'reporting_year': 2025,
             'report_date': datetime.now().strftime('%Y-%m-%d'),
             'facilities': ['Facility A', 'Facility B', 'Facility C', 'Facility D']
         }

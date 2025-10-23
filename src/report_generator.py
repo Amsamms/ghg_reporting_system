@@ -27,7 +27,8 @@ class GHGReportGenerator:
         """Extract custom text from Custom Text sheet"""
         custom_text = {
             'company_introduction': '',
-            'conclusion_text': ''
+            'conclusion_text': '',
+            'conclusion_title': 'Conclusion & Final Notes'  # Default title
         }
 
         try:
@@ -41,7 +42,9 @@ class GHGReportGenerator:
 
                         if 'Company Introduction' in field:
                             custom_text['company_introduction'] = content
-                        elif 'Conclusion' in field:
+                        elif 'Conclusion Title' in field:
+                            custom_text['conclusion_title'] = content if content and content != 'nan' else 'Conclusion & Final Notes'
+                        elif 'Conclusion' in field and 'Title' not in field:
                             custom_text['conclusion_text'] = content
         except Exception as e:
             print(f"Error loading custom text: {e}")
@@ -707,7 +710,7 @@ class GHGReportGenerator:
                         'priority': 'High',
                         'category': 'Target Achievement',
                         'recommendation': 'Develop accelerated action plans for underperforming metrics. Increase investment in emission reduction technologies.',
-                        'potential_impact': 'Meet 2024 targets'
+                        'potential_impact': 'Meet 2025 targets'
                     })
 
             # General recommendations
@@ -878,7 +881,7 @@ class GHGReportGenerator:
     def get_company_info(self):
         """Extract company information from Dashboard sheet"""
         if not self.data:
-            return {'company_name': 'Unknown Company', 'reporting_year': '2024'}
+            return {'company_name': 'Unknown Company', 'reporting_year': '2025'}
 
         try:
             # First, try to get Dashboard data from already-loaded data (works for sample data)
@@ -908,7 +911,7 @@ class GHGReportGenerator:
                     if 'company_name' not in company_info:
                         company_info['company_name'] = 'Unknown Company'
                     if 'reporting_year' not in company_info:
-                        company_info['reporting_year'] = '2024'
+                        company_info['reporting_year'] = '2025'
 
                     return company_info
 
@@ -917,7 +920,7 @@ class GHGReportGenerator:
             dashboard_df_raw = pd.read_excel(self.excel_file, sheet_name='Dashboard', header=None)
 
             if dashboard_df_raw.empty:
-                return {'company_name': 'Unknown Company', 'reporting_year': '2024'}
+                return {'company_name': 'Unknown Company', 'reporting_year': '2025'}
 
             company_info = {}
 
@@ -929,20 +932,20 @@ class GHGReportGenerator:
                 company_info['company_name'] = str(dashboard_df_raw.iloc[0, 1]) if pd.notna(dashboard_df_raw.iloc[0, 1]) else 'Unknown Company'
 
             if len(dashboard_df_raw) > 1 and len(dashboard_df_raw.columns) > 1:
-                company_info['reporting_year'] = str(dashboard_df_raw.iloc[1, 1]) if pd.notna(dashboard_df_raw.iloc[1, 1]) else '2024'
+                company_info['reporting_year'] = str(dashboard_df_raw.iloc[1, 1]) if pd.notna(dashboard_df_raw.iloc[1, 1]) else '2025'
 
             # Set defaults if not found
             if 'company_name' not in company_info:
                 company_info['company_name'] = 'Unknown Company'
             if 'reporting_year' not in company_info:
-                company_info['reporting_year'] = '2024'
+                company_info['reporting_year'] = '2025'
 
             return company_info
         except Exception as e:
             print(f"Error extracting company info: {e}")
             import traceback
             traceback.print_exc()
-            return {'company_name': 'Unknown Company', 'reporting_year': '2024'}
+            return {'company_name': 'Unknown Company', 'reporting_year': '2025'}
 
     def get_summary_statistics(self, facility_filter=None):
         """Generate summary statistics for the report
@@ -1006,7 +1009,7 @@ class GHGReportGenerator:
                 'report_date': self.report_date,
                 'facility_name': facility_filter if facility_filter else 'All Facilities',
                 'company_name': company_info.get('company_name', 'Unknown Company'),
-                'reporting_year': company_info.get('reporting_year', '2024'),
+                'reporting_year': company_info.get('reporting_year', '2025'),
                 'facility_names': facility_names,
                 **scope_percentages
             }

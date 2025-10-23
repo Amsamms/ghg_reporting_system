@@ -131,8 +131,8 @@ class PDFReportGenerator:
         summary_stats = self.report_gen.get_summary_statistics()
 
         company_data = [
-            ["Company:", "PetrolCorp International"],
-            ["Reporting Year:", "2024"],
+            ["Company:", summary_stats.get('company_name', 'PetrolCorp International')],
+            ["Reporting Year:", summary_stats.get('reporting_year', '2025')],
             ["Report Date:", summary_stats.get('report_date', 'N/A')],
             ["Total Facilities:", str(summary_stats.get('total_facilities', 0))],
             ["Total GHG Emissions:", f"{summary_stats.get('total_emissions', 0):,.0f} tCO₂e"],
@@ -199,7 +199,7 @@ class PDFReportGenerator:
         # Summary text
         summary_text = f"""
         <b>Overview:</b> This report presents a comprehensive analysis of greenhouse gas emissions
-        for PetrolCorp International's operations during 2024. Total emissions amounted to
+        for {summary_stats.get('company_name', 'PetrolCorp International')}'s operations during {summary_stats.get('reporting_year', '2025')}. Total emissions amounted to
         {summary_stats.get('total_emissions', 0):,.0f} tCO₂e across {summary_stats.get('total_facilities', 0)} facilities.
         <br/><br/>
         <b>Key Findings:</b>

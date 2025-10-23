@@ -10,7 +10,7 @@ class GHGExcelGenerator:
     def __init__(self):
         self.company_info = {
             'name': 'PetrolCorp International',
-            'reporting_year': 2024,
+            'reporting_year': 2025,
             'report_date': datetime.now().strftime('%Y-%m-%d'),
             'facilities': ['Refinery A', 'Refinery B', 'Offshore Platform C', 'Distribution Center D']
         }
