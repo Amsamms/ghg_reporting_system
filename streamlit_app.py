@@ -82,7 +82,80 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ============================================
+# Authentication Functions
+# ============================================
+
+def check_credentials(username, password):
+    """Check if username and password match those stored in Streamlit secrets
+
+    To configure credentials in Streamlit Cloud:
+    1. Go to App Settings → Secrets
+    2. Add the following:
+       [auth]
+       username = "your_username"
+       password = "your_password"
+    """
+    try:
+        return (username == st.secrets["auth"]["username"] and
+                password == st.secrets["auth"]["password"])
+    except Exception as e:
+        st.error(f"Error reading authentication secrets. Please configure secrets in Streamlit Cloud.")
+        st.error(f"Error details: {str(e)}")
+        return False
+
+def show_login_page():
+    """Display login page with username and password fields"""
+    # Center the login form
+    col1, col2, col3 = st.columns([1, 2, 1])
+
+    with col2:
+        st.markdown("""
+        <div style="text-align: center; padding: 2rem;">
+            <h1>🔒 Login Required</h1>
+            <p style="color: #666;">Please enter your credentials to access the GHG Reporting System</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Login form
+        with st.form("login_form"):
+            username = st.text_input("👤 Username", placeholder="Enter your username")
+            password = st.text_input("🔑 Password", type="password", placeholder="Enter your password")
+            submit_button = st.form_submit_button("🚀 Login", use_container_width=True)
+
+            if submit_button:
+                if username and password:
+                    if check_credentials(username, password):
+                        st.session_state.authenticated = True
+                        st.session_state.username = username
+                        st.success("✅ Login successful! Redirecting...")
+                        st.rerun()
+                    else:
+                        st.error("❌ Invalid username or password. Please try again.")
+                else:
+                    st.warning("⚠️ Please enter both username and password.")
+
+        st.markdown("""
+        <div style="text-align: center; padding: 1rem; color: #888; font-size: 0.9rem;">
+            <p>🌱 EPROM Professional GHG Reporting System</p>
+            <p>Secure access for authorized users only</p>
+        </div>
+        """, unsafe_allow_html=True)
+
 def main():
+    # Initialize authentication state
+    if 'authenticated' not in st.session_state:
+        st.session_state.authenticated = False
+
+    # Check if user is authenticated
+    if not st.session_state.authenticated:
+        show_login_page()
+        return
+
+    # ============================================
+    # Main Application (After Authentication)
+    # ============================================
+
     # App Header with Logo
     # Get the directory where this script is located
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -104,6 +177,18 @@ def main():
 
     # Sidebar Navigation
     st.sidebar.title("📋 Navigation")
+
+    # Add logout button at the top of sidebar
+    if st.sidebar.button("🚪 Logout", use_container_width=True):
+        st.session_state.authenticated = False
+        st.session_state.username = None
+        st.rerun()
+
+    # Display logged in user
+    if 'username' in st.session_state and st.session_state.username:
+        st.sidebar.markdown(f"**👤 Logged in as:** {st.session_state.username}")
+
+    st.sidebar.markdown("---")
     page = st.sidebar.selectbox(
         "Select a page:",
         ["🏠 Home", "📤 Upload Excel", "✍️ Manual Input", "📊 Generate Reports", "📋 Template Download", "ℹ️ Help & Info"]
