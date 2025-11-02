@@ -10,7 +10,9 @@ import sys
 # Add ghgcore to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from ghgcore.db import init_db
+from sqlmodel import select
+from ghgcore.db import init_db, get_db
+from ghgcore.models import Organization, Facility, Activity, EmissionFactor, Calculation
 
 
 def main():

@@ -2,7 +2,7 @@
 Database session management and initialization.
 """
 
-from sqlmodel import SQLModel, create_engine, Session
+from sqlmodel import SQLModel, create_engine, Session, select
 from sqlalchemy.pool import StaticPool
 from pathlib import Path
 from typing import Generator
@@ -49,7 +49,7 @@ def init_db():
         from .models import GWP
 
         # Check if GWP data exists
-        existing = session.query(GWP).first()
+        existing = session.exec(select(GWP)).first()
         if not existing:
             # AR5 100-year GWP values (IPCC Fifth Assessment Report)
             gwp_ar5 = [
@@ -83,7 +83,7 @@ def init_db():
 
         # Seed common emission sources
         from .models import Source
-        existing_sources = session.query(Source).first()
+        existing_sources = session.exec(select(Source)).first()
         if not existing_sources:
             sources = [
                 # Scope 1 sources
