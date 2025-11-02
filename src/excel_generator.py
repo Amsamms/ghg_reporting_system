@@ -10,7 +10,7 @@ class GHGExcelGenerator:
     def __init__(self):
         self.company_info = {
             'name': 'PetrolCorp International',
-            'reporting_year': 2024,
+            'reporting_year': 2025,
             'report_date': datetime.now().strftime('%Y-%m-%d'),
             'facilities': ['Refinery A', 'Refinery B', 'Offshore Platform C', 'Distribution Center D']
         }
@@ -187,6 +187,7 @@ class GHGExcelGenerator:
             custom_text_data = pd.DataFrame([
                 ['Field', 'Content'],
                 ['Company Introduction', 'Example: Company A is specialized in refining operations. It has been established since 1995 and operates multiple facilities across the region...'],
+                ['Conclusion Title', 'Conclusion & Final Notes'],
                 ['Conclusion', 'Example: The company is committed to reducing emissions by 30% by 2030. Further investments in renewable energy and carbon capture technologies are planned...']
             ])
             custom_text_data.to_excel(writer, sheet_name='Custom Text', index=False, header=False)

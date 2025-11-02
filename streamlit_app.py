@@ -82,7 +82,80 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ============================================
+# Authentication Functions
+# ============================================
+
+def check_credentials(username, password):
+    """Check if username and password match those stored in Streamlit secrets
+
+    To configure credentials in Streamlit Cloud:
+    1. Go to App Settings → Secrets
+    2. Add the following:
+       [auth]
+       username = "your_username"
+       password = "your_password"
+    """
+    try:
+        return (username == st.secrets["auth"]["username"] and
+                password == st.secrets["auth"]["password"])
+    except Exception as e:
+        st.error(f"Error reading authentication secrets. Please configure secrets in Streamlit Cloud.")
+        st.error(f"Error details: {str(e)}")
+        return False
+
+def show_login_page():
+    """Display login page with username and password fields"""
+    # Center the login form
+    col1, col2, col3 = st.columns([1, 2, 1])
+
+    with col2:
+        st.markdown("""
+        <div style="text-align: center; padding: 2rem;">
+            <h1>🔒 Login Required</h1>
+            <p style="color: #666;">Please enter your credentials to access the GHG Reporting System</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Login form
+        with st.form("login_form"):
+            username = st.text_input("👤 Username", placeholder="Enter your username")
+            password = st.text_input("🔑 Password", type="password", placeholder="Enter your password")
+            submit_button = st.form_submit_button("🚀 Login", use_container_width=True)
+
+            if submit_button:
+                if username and password:
+                    if check_credentials(username, password):
+                        st.session_state.authenticated = True
+                        st.session_state.username = username
+                        st.success("✅ Login successful! Redirecting...")
+                        st.rerun()
+                    else:
+                        st.error("❌ Invalid username or password. Please try again.")
+                else:
+                    st.warning("⚠️ Please enter both username and password.")
+
+        st.markdown("""
+        <div style="text-align: center; padding: 1rem; color: #888; font-size: 0.9rem;">
+            <p>🌱 EPROM Professional GHG Reporting System</p>
+            <p>Secure access for authorized users only</p>
+        </div>
+        """, unsafe_allow_html=True)
+
 def main():
+    # Initialize authentication state
+    if 'authenticated' not in st.session_state:
+        st.session_state.authenticated = False
+
+    # Check if user is authenticated
+    if not st.session_state.authenticated:
+        show_login_page()
+        return
+
+    # ============================================
+    # Main Application (After Authentication)
+    # ============================================
+
     # App Header with Logo
     # Get the directory where this script is located
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -104,6 +177,18 @@ def main():
 
     # Sidebar Navigation
     st.sidebar.title("📋 Navigation")
+
+    # Add logout button at the top of sidebar
+    if st.sidebar.button("🚪 Logout", use_container_width=True):
+        st.session_state.authenticated = False
+        st.session_state.username = None
+        st.rerun()
+
+    # Display logged in user
+    if 'username' in st.session_state and st.session_state.username:
+        st.sidebar.markdown(f"**👤 Logged in as:** {st.session_state.username}")
+
+    st.sidebar.markdown("---")
     page = st.sidebar.selectbox(
         "Select a page:",
         ["🏠 Home", "📤 Upload Excel", "✍️ Manual Input", "📊 Generate Reports", "📋 Template Download", "ℹ️ Help & Info"]
@@ -319,7 +404,7 @@ def show_manual_input_page():
 
     with col1:
         company_name = st.text_input("Company Name", value="Your Company Name")
-        reporting_year = st.number_input("Reporting Year", value=2024, min_value=2020, max_value=2030)
+        reporting_year = st.number_input("Reporting Year", value=2025, min_value=2020, max_value=2030)
 
     with col2:
         report_date = st.date_input("Report Date", value=date.today())
@@ -339,8 +424,15 @@ def show_manual_input_page():
         help="This text will appear in the Executive Overview section of the HTML report"
     )
 
+    conclusion_title = st.text_input(
+        "Conclusion Section Title",
+        value="Conclusion & Final Notes",
+        placeholder="Example: Final Remarks, Summary & Outlook, etc.",
+        help="Customize the heading for the conclusion section of the HTML report"
+    )
+
     conclusion_text = st.text_area(
-        "Conclusion & Final Notes (appears at the end of the report)",
+        "Conclusion Section Content (appears at the end of the report)",
         value="",
         height=150,
         placeholder="Example: The company is committed to reducing emissions by 30% by 2030. Further investments in renewable energy and carbon capture technologies are planned...",
@@ -354,6 +446,7 @@ def show_manual_input_page():
         'report_date': report_date.strftime('%Y-%m-%d'),
         'num_facilities': num_facilities,
         'company_introduction': company_introduction.strip(),
+        'conclusion_title': conclusion_title.strip() if conclusion_title.strip() else 'Conclusion & Final Notes',
         'conclusion_text': conclusion_text.strip()
     }
 
@@ -953,7 +1046,7 @@ def create_manual_excel(filepath, data):
         company_info = st.session_state.company_info
         summary_data = pd.DataFrame([
             ['Company Name', company_info.get('name', 'Your Company')],
-            ['Reporting Year', company_info.get('reporting_year', 2024)],
+            ['Reporting Year', company_info.get('reporting_year', 2025)],
             ['Report Date', company_info.get('report_date', datetime.now().strftime('%Y-%m-%d'))],
             ['Total GHG Emissions (tCO2e)', f"{data['totals']['grand_total']:.2f}"],
             ['Scope 1 Emissions (tCO2e)', f"{data['totals']['scope1_total']:.2f}"],
@@ -988,10 +1081,12 @@ def create_manual_excel(filepath, data):
 
         # Custom Text sheet
         company_intro = company_info.get('company_introduction', '')
+        conclusion_title = company_info.get('conclusion_title', 'Conclusion & Final Notes')
         conclusion = company_info.get('conclusion_text', '')
         custom_text_data = pd.DataFrame([
             ['Field', 'Content'],
             ['Company Introduction', company_intro],
+            ['Conclusion Title', conclusion_title],
             ['Conclusion', conclusion]
         ])
         custom_text_data.to_excel(writer, sheet_name='Custom Text', index=False, header=False)
@@ -1452,7 +1547,7 @@ def create_blank_template():
         # Create template with minimal data
         excel_gen.company_info = {
             'name': '[Your Company Name]',
-            'reporting_year': 2024,
+            'reporting_year': 2025,
             'report_date': datetime.now().strftime('%Y-%m-%d'),
             'facilities': ['Facility A', 'Facility B', 'Facility C', 'Facility D']
         }

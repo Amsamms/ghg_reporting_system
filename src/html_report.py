@@ -717,7 +717,7 @@ class HTMLReportGenerator:
 
             {% if custom_text.conclusion_text and custom_text.conclusion_text != 'nan' and custom_text.conclusion_text|length > 0 %}
             <section id="conclusion" class="section">
-                <h2><i class="fas fa-flag-checkered"></i> Conclusion & Final Notes</h2>
+                <h2><i class="fas fa-flag-checkered"></i> {{ custom_text.conclusion_title }}</h2>
                 <div class="highlight" style="background: linear-gradient(120deg, #fff9c4 0%, #fff59d 100%);">
                     <p style="white-space: pre-line; line-height: 1.8; text-align: justify; font-size: 1.05rem;">{{ custom_text.conclusion_text }}</p>
                 </div>
