@@ -128,20 +128,17 @@ def generate_ai_recommendations(
     client = OpenAI(api_key=api_key)
 
     response = client.chat.completions.create(
-        model="gpt-4o-mini",  # Cost-effective model
+        model="gpt-5-mini",  # Using gpt-5-mini for cost-efficiency
         messages=[
-            {
-                "role": "system",
-                "content": "You are a GHG emissions expert specializing in petroleum industry decarbonization. Provide data-driven, actionable recommendations."
-            },
             {
                 "role": "user",
                 "content": prompt
             }
         ],
-        max_tokens=2000,
-        temperature=0.7,
-        response_format={"type": "json_object"}
+        reasoning_effort="minimal",  # User requested minimal reasoning
+        verbosity="medium",  # Medium verbosity for balanced output
+        max_completion_tokens=2000,  # Enough for 5-6 recommendations
+        response_format={"type": "json_object"}  # Force JSON output
     )
 
     # Parse response

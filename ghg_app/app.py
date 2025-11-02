@@ -325,8 +325,8 @@ def show_exports():
     st.markdown("### 🤖 AI-Powered Recommendations")
 
     ai_enabled = st.checkbox(
-        "Enable AI Recommendations (GPT-4)",
-        help="Uses OpenAI GPT-4 to generate strategic emission reduction recommendations. Requires OPENAI_API_KEY environment variable."
+        "Enable AI Recommendations (GPT-5)",
+        help="Uses OpenAI GPT-5-mini to generate strategic emission reduction recommendations. Requires OPENAI_API_KEY environment variable."
     )
 
     if ai_enabled:
@@ -410,7 +410,7 @@ def show_exports():
                     st.markdown("### 💡 AI-Generated Strategic Recommendations")
 
                     if context.get('ai_powered'):
-                        st.success("🤖 Powered by GPT-4")
+                        st.success("🤖 Powered by GPT-5-mini")
                     else:
                         st.info("ℹ️ Using rule-based recommendations (AI unavailable)")
 
