@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ organization.name }} - GHG Inventory Report {{ year }}</title>
+    <style>
+        :root {
+            --primary-color: #2c5f2d;
+            --secondary-color: #97bc62;
+            --accent-color: #0077be;
+            --text-color: #333;
+            --bg-color: #fff;
+            --light-gray: #f5f5f5;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background: var(--bg-color);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        nav {
+            background: var(--light-gray);
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        nav li {
+            margin: 5px 15px;
+        }
+
+        nav a {
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: var(--primary-color);
+        }
+
+        section {
+            margin: 40px 0;
+            padding: 30px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        h2 {
+            color: var(--primary-color);
+            font-size: 2rem;
+            margin-bottom: 20px;
+            border-bottom: 3px solid var(--secondary-color);
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            color: var(--accent-color);
+            font-size: 1.5rem;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: var(--primary-color);
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: var(--light-gray);
+        }
+
+        .metric-card {
+            background: var(--light-gray);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .chart-container {
+            margin: 30px 0;
+            padding: 20px;
+            background: var(--light-gray);
+            border-radius: 8px;
+        }
+
+        footer {
+            background: var(--text-color);
+            color: white;
+            text-align: center;
+            padding: 30px;
+            margin-top: 50px;
+        }
+
+        .compliance-badge {
+            display: inline-block;
+            background: var(--secondary-color);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin: 5px;
+        }
+
+        @media print {
+            nav {
+                display: none;
+            }
+
+            section {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>{{ organization.name }}</h1>
+        <p>Greenhouse Gas Inventory Report</p>
+        <p>Reporting Period: {{ period_start }} to {{ period_end }}</p>
+        <div style="margin-top: 15px;">
+            <span class="compliance-badge">ISO 14064-1:2018</span>
+            <span class="compliance-badge">GHG Protocol Corporate Standard</span>
+        </div>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="#summary">Executive Summary</a></li>
+            <li><a href="#introduction">Introduction</a></li>
+            <li><a href="#boundaries">Boundaries</a></li>
+            <li><a href="#methods">Methodology</a></li>
+            <li><a href="#results">Results</a></li>
+            <li><a href="#uncertainty">Uncertainty</a></li>
+            <li><a href="#qaqc">QA/QC</a></li>
+            <li><a href="#appendices">Appendices</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer>
+        <p>&copy; {{ year }} {{ organization.name }}</p>
+        <p>Generated on {{ generation_date }}</p>
+        <p style="font-size: 0.9rem; margin-top: 10px;">
+            This report has been prepared in accordance with ISO 14064-1:2018 and the GHG Protocol Corporate Standard
+        </p>
+    </footer>
+
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+        // Add any interactive features here
+        document.querySelectorAll('nav a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const target = document.querySelector(link.getAttribute('href'));
+                target.scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+    </script>
+</body>
+</html>
