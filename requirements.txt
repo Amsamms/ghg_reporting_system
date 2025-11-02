@@ -1,23 +1,41 @@
-# Core Dependencies for GHG Reporting System
-streamlit==1.50.0
-pandas==2.3.2
-numpy==2.2.6
-plotly==6.3.0
-openpyxl==3.1.5
-Jinja2==3.1.6
-matplotlib==3.10.6
-Pillow==11.3.0
-weasyprint==66.0
+# GHG Inventory Management System - Dependencies
 
-# AI-powered recommendations
-openai>=1.54.0
+# Core Framework
+streamlit>=1.30.0
 
-# Optional: For enhanced UI
-streamlit-option-menu==0.4.0
+# Database ORM
+sqlmodel>=0.0.14
+sqlalchemy>=2.0.23
 
-# For PDF generation alternative
-kaleido==1.1.0
+# Data Processing
+pandas>=2.1.4
+numpy>=1.26.2
+openpyxl>=3.1.2        # Excel support
 
-# Testing dependencies (optional for deployment)
-pytest==8.4.2
-pytest-cov==7.0.0
+# Unit Handling
+pint>=0.23            # Unit-safe calculations
+
+# Validation
+pydantic>=2.5.3       # Data validation
+
+# Reporting & Visualization
+jinja2>=3.1.2         # HTML templates
+plotly>=5.18.0        # Interactive charts
+kaleido>=0.2.1        # Static image export
+
+# PDF Generation (choose one based on deployment)
+weasyprint>=60.1      # Preferred for full features
+reportlab>=4.0.7      # Alternative/fallback
+
+# Date/Time
+python-dateutil>=2.8.2
+
+# AI Recommendations
+openai>=1.12.0        # OpenAI GPT-5-mini for AI-powered recommendations
+
+# Development & Testing
+pytest>=7.4.3
+pytest-cov>=4.1.0
+
+# CLI utilities
+click>=8.1.7          # For command-line tools
