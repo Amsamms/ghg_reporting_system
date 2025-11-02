@@ -295,7 +295,147 @@ def show_report_composer():
 def show_exports():
     """Exports page."""
     st.title("📥 Export Reports")
-    st.info("Report generation and download - to be implemented")
+
+    from ghgcore.db import get_db
+    from ghgcore.models import Organization
+    from ghgcore.reporting.compose import compose_report_context
+    from ghgcore.reporting.export_html import export_html_report
+    from ghgcore.reporting.export_excel import export_excel_inventory
+    from sqlmodel import select
+    from pathlib import Path
+    import os
+
+    # Get organizations
+    with get_db() as session:
+        orgs = session.exec(select(Organization)).all()
+
+    if not orgs:
+        st.warning("No organizations found. Create an organization first in Project Setup.")
+        return
+
+    st.markdown("### Generate ISO 14064-1 Compliant Reports")
+
+    # Select organization
+    org_options = {org.name: org.id for org in orgs}
+    selected_org_name = st.selectbox("Select Organization", list(org_options.keys()))
+    org_id = org_options[selected_org_name]
+
+    # AI Recommendations toggle
+    st.markdown("---")
+    st.markdown("### 🤖 AI-Powered Recommendations")
+
+    ai_enabled = st.checkbox(
+        "Enable AI Recommendations (GPT-4)",
+        help="Uses OpenAI GPT-4 to generate strategic emission reduction recommendations. Requires OPENAI_API_KEY environment variable."
+    )
+
+    if ai_enabled:
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            st.error("⚠️ OPENAI_API_KEY environment variable not set. AI recommendations will fallback to rule-based.")
+            st.code("export OPENAI_API_KEY='your-api-key-here'", language="bash")
+        else:
+            st.success("✓ API key detected. AI recommendations will be used.")
+
+    # Report options
+    st.markdown("---")
+    st.markdown("### Report Options")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        include_charts = st.checkbox("Include Charts", value=True)
+
+    with col2:
+        include_evidence = st.checkbox("Include Evidence Manifest", value=True)
+
+    # Generate report button
+    st.markdown("---")
+
+    if st.button("🚀 Generate Reports", type="primary", use_container_width=True):
+        with st.spinner("Generating comprehensive GHG inventory report..."):
+            try:
+                with get_db() as session:
+                    # Compose report context
+                    context = compose_report_context(
+                        session,
+                        org_id=org_id,
+                        use_ai_recommendations=ai_enabled
+                    )
+
+                    # Create export directory
+                    export_dir = Path("exports") / selected_org_name.replace(" ", "_")
+                    export_dir.mkdir(parents=True, exist_ok=True)
+
+                    # Generate HTML report
+                    html_path = export_dir / "ghg_inventory_report.html"
+                    export_html_report(context, html_path)
+
+                    # Generate Excel report
+                    excel_path = export_dir / "ghg_inventory_detailed.xlsx"
+                    export_excel_inventory(context, excel_path)
+
+                st.success(f"✓ Reports generated successfully!")
+
+                # Show download links
+                st.markdown("### 📥 Download Reports")
+
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    if html_path.exists():
+                        with open(html_path, 'rb') as f:
+                            st.download_button(
+                                label="📄 Download HTML Report",
+                                data=f,
+                                file_name="ghg_inventory_report.html",
+                                mime="text/html",
+                                use_container_width=True
+                            )
+
+                with col2:
+                    if excel_path.exists():
+                        with open(excel_path, 'rb') as f:
+                            st.download_button(
+                                label="📊 Download Excel Report",
+                                data=f,
+                                file_name="ghg_inventory_detailed.xlsx",
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                use_container_width=True
+                            )
+
+                # Show AI recommendations if enabled
+                if ai_enabled and context.get('recommendations'):
+                    st.markdown("---")
+                    st.markdown("### 💡 AI-Generated Strategic Recommendations")
+
+                    if context.get('ai_powered'):
+                        st.success("🤖 Powered by GPT-4")
+                    else:
+                        st.info("ℹ️ Using rule-based recommendations (AI unavailable)")
+
+                    for rec in context['recommendations']:
+                        priority = rec.get('priority', 'Medium')
+                        category = rec.get('category', '')
+                        recommendation = rec.get('recommendation', '')
+                        impact = rec.get('potential_impact', '')
+
+                        # Color code by priority
+                        if priority == 'High':
+                            priority_color = "🔴"
+                        elif priority == 'Medium':
+                            priority_color = "🟡"
+                        else:
+                            priority_color = "🟢"
+
+                        with st.expander(f"{priority_color} **{priority} Priority**: {category}"):
+                            st.markdown(f"**Recommendation:**\n{recommendation}")
+                            st.markdown(f"**Potential Impact:**\n{impact}")
+
+            except Exception as e:
+                st.error(f"Error generating reports: {e}")
+                import traceback
+                st.code(traceback.format_exc())
 
 
 if __name__ == "__main__":

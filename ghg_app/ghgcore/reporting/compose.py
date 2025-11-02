@@ -16,12 +16,14 @@ from ..engine.aggregation import (
 )
 from ..engine.checks import run_all_checks
 from ..engine.uncertainty import uncertainty_by_scope
+from ..engine.recommendations import generate_recommendations
 
 
 def compose_report_context(
     session: Session,
     org_id: int,
     year: Optional[int] = None,
+    use_ai_recommendations: bool = False,
 ) -> Dict[str, Any]:
     """
     Compose complete report context from database and calculations.
@@ -66,6 +68,15 @@ def compose_report_context(
 
     # QA/QC checks
     qaqc_results = run_all_checks(session, org_id)
+
+    # Generate recommendations
+    recommendations = generate_recommendations(
+        summary=summary,
+        by_scope=by_scope,
+        by_subcategory=by_subcategory,
+        by_facility=by_facility,
+        use_ai=use_ai_recommendations,
+    )
 
     # Compose context
     context = {
@@ -118,6 +129,10 @@ def compose_report_context(
 
         # QA/QC
         'qaqc': qaqc_results,
+
+        # Recommendations
+        'recommendations': recommendations,
+        'ai_powered': use_ai_recommendations,
 
         # Compliance
         'standards_compliance': {
