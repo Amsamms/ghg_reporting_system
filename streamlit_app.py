@@ -267,13 +267,313 @@ def show_project_setup():
 def show_inventory_builder():
     """Inventory builder page."""
     st.title("📝 Inventory Builder")
-    st.info("Activity entry interface - to be implemented")
+    st.markdown("Add emission activities for your facilities.")
+
+    with get_db() as session:
+        # Get organizations
+        orgs = session.exec(select(Organization)).all()
+
+        if not orgs:
+            st.warning("⚠️ No organizations found. Please create an organization in **Project Setup** first.")
+            return
+
+        # Select organization
+        org_options = {f"{org.name} (ID: {org.id})": org.id for org in orgs}
+        selected_org = st.selectbox("Select Organization", list(org_options.keys()))
+        org_id = org_options[selected_org]
+
+        # Get facilities for this org
+        facilities = session.exec(select(Facility).where(Facility.organization_id == org_id)).all()
+
+        if not facilities:
+            st.warning(f"⚠️ No facilities found for this organization. Please add facilities in **Project Setup** first.")
+            return
+
+        # Select facility
+        fac_options = {f"{fac.name} (ID: {fac.id})": fac.id for fac in facilities}
+        selected_fac = st.selectbox("Select Facility", list(fac_options.keys()))
+        facility_id = fac_options[selected_fac]
+
+        st.markdown("---")
+        st.markdown("### ➕ Add New Activity")
+
+        # Activity form
+        with st.form("activity_form", clear_on_submit=True):
+            col1, col2 = st.columns(2)
+
+            with col1:
+                activity_type = st.selectbox("Activity Type", [
+                    "stationary_combustion",
+                    "mobile_combustion",
+                    "purchased_electricity",
+                    "flaring",
+                    "fugitives",
+                    "transport",
+                    "other"
+                ])
+                scope = st.selectbox("Scope", [1, 2, 3])
+                description = st.text_input("Description", placeholder="e.g., Natural gas boiler combustion")
+
+            with col2:
+                value = st.number_input("Activity Value", min_value=0.0, value=0.0, format="%.2f")
+                unit = st.selectbox("Unit", [
+                    "GJ", "MWh", "kWh", "kg", "tonne", "bbl", "scf", "Nm3", "toe", "liters", "gallons"
+                ])
+                period_start = st.date_input("Period Start")
+                period_end = st.date_input("Period End")
+
+            notes = st.text_area("Notes (optional)")
+
+            submitted = st.form_submit_button("Add Activity")
+
+            if submitted:
+                # Create activity
+                activity = Activity(
+                    organization_id=org_id,
+                    facility_id=facility_id,
+                    scope=scope,
+                    subcategory=activity_type,
+                    description=description,
+                    period_start=period_start,
+                    period_end=period_end,
+                    value=value,
+                    unit=unit,
+                    notes=notes
+                )
+                session.add(activity)
+                session.commit()
+                session.refresh(activity)
+                st.success(f"✅ Activity #{activity.id} added successfully!")
+                st.rerun()
+
+        st.markdown("---")
+        st.markdown("### 📋 Existing Activities")
+
+        # List activities for this facility
+        activities = session.exec(
+            select(Activity)
+            .where(Activity.facility_id == facility_id)
+            .order_by(Activity.id.desc())
+        ).all()
+
+        if activities:
+            for act in activities:
+                with st.expander(f"🔖 Activity #{act.id}: {act.description} ({act.subcategory})"):
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.write(f"**Scope:** {act.scope}")
+                        st.write(f"**Type:** {act.subcategory}")
+                    with col2:
+                        st.write(f"**Value:** {act.value} {act.unit}")
+                        st.write(f"**Period:** {act.period_start} to {act.period_end}")
+                    with col3:
+                        if act.notes:
+                            st.write(f"**Notes:** {act.notes}")
+
+                    # Delete button
+                    if st.button(f"🗑️ Delete Activity #{act.id}", key=f"delete_{act.id}"):
+                        session.delete(act)
+                        session.commit()
+                        st.success(f"Activity #{act.id} deleted")
+                        st.rerun()
+        else:
+            st.info("No activities added yet. Use the form above to add your first activity.")
 
 
 def show_factor_picker():
     """Emission factor picker page."""
     st.title("🔢 Emission Factor Picker")
-    st.info("Emission factor selection interface - to be implemented")
+    st.markdown("Browse and manage emission factors from various authorities.")
+
+    with get_db() as session:
+        # Tabs for different functions
+        tab1, tab2, tab3 = st.tabs(["📚 Browse Factors", "➕ Add Factor", "📥 Import Factors"])
+
+        with tab1:
+            st.markdown("### Browse Emission Factors")
+
+            # Get all emission factors
+            from ghgcore.models import EmissionFactor
+            factors = session.exec(select(EmissionFactor)).all()
+
+            if not factors:
+                st.info("No emission factors in database. Add factors manually or import from file.")
+                st.markdown("""
+                **Tip:** You can add emission factors in the following ways:
+                1. Use the **Add Factor** tab to add individual factors manually
+                2. Use the **Import Factors** tab to bulk import from CSV/Excel
+                3. Use the seed_factors.py script with DEFRA, EPA, IPCC, API, or IEA data
+                """)
+            else:
+                # Filter options
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    authorities = list(set([f.authority for f in factors if f.authority]))
+                    selected_authority = st.selectbox("Filter by Authority", ["All"] + authorities)
+
+                with col2:
+                    scopes = list(set([f.scope for f in factors if f.scope]))
+                    selected_scope = st.selectbox("Filter by Scope", ["All"] + [str(s) for s in sorted(scopes)])
+
+                with col3:
+                    search_term = st.text_input("🔍 Search description")
+
+                # Apply filters
+                filtered_factors = factors
+                if selected_authority != "All":
+                    filtered_factors = [f for f in filtered_factors if f.authority == selected_authority]
+                if selected_scope != "All":
+                    filtered_factors = [f for f in filtered_factors if str(f.scope) == selected_scope]
+                if search_term:
+                    filtered_factors = [f for f in filtered_factors if search_term.lower() in (f.description or "").lower()]
+
+                st.markdown(f"**Found {len(filtered_factors)} factors**")
+
+                # Display factors
+                for factor in filtered_factors[:50]:  # Limit to 50 for performance
+                    with st.expander(f"🔖 {factor.description[:80] if factor.description else 'No description'} | {factor.authority or 'Unknown'} | Scope {factor.scope}"):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.write(f"**Factor Value:** {factor.factor_value}")
+                            st.write(f"**Unit:** {factor.factor_unit}")
+                            st.write(f"**Scope:** {factor.scope}")
+                            st.write(f"**Subcategory:** {factor.subcategory}")
+                        with col2:
+                            st.write(f"**Authority:** {factor.authority or 'N/A'}")
+                            st.write(f"**Year:** {factor.year or 'N/A'}")
+                            st.write(f"**Region:** {factor.region or 'Global'}")
+                            st.write(f"**Source:** {factor.source_reference or 'N/A'}")
+
+                        if factor.notes:
+                            st.write(f"**Notes:** {factor.notes}")
+
+                if len(filtered_factors) > 50:
+                    st.info(f"Showing first 50 of {len(filtered_factors)} factors. Use filters to narrow results.")
+
+        with tab2:
+            st.markdown("### ➕ Add Emission Factor Manually")
+
+            with st.form("add_factor_form", clear_on_submit=True):
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    description = st.text_input("Description*", placeholder="e.g., Natural gas combustion")
+                    factor_value = st.number_input("Factor Value*", min_value=0.0, format="%.6f")
+                    factor_unit = st.text_input("Factor Unit*", value="kg CO2e/GJ", placeholder="e.g., kg CO2e/GJ")
+                    scope = st.selectbox("Scope*", [1, 2, 3])
+                    subcategory = st.text_input("Subcategory*", placeholder="e.g., stationary_combustion")
+
+                with col2:
+                    authority = st.text_input("Authority", placeholder="e.g., EPA, DEFRA, IPCC")
+                    year = st.number_input("Year", min_value=1990, max_value=2030, value=2023, step=1)
+                    region = st.text_input("Region", value="Global")
+                    source_reference = st.text_input("Source Reference", placeholder="URL or document reference")
+
+                notes = st.text_area("Notes (optional)")
+
+                submitted = st.form_submit_button("Add Emission Factor")
+
+                if submitted:
+                    if not description or not factor_value or not factor_unit or not subcategory:
+                        st.error("Please fill in all required fields (marked with *)")
+                    else:
+                        from ghgcore.models import EmissionFactor
+                        ef = EmissionFactor(
+                            description=description,
+                            factor_value=factor_value,
+                            factor_unit=factor_unit,
+                            scope=scope,
+                            subcategory=subcategory,
+                            authority=authority if authority else None,
+                            year=year,
+                            region=region if region else "Global",
+                            source_reference=source_reference if source_reference else None,
+                            notes=notes if notes else None
+                        )
+                        session.add(ef)
+                        session.commit()
+                        st.success(f"✅ Emission factor added successfully! (ID: {ef.id})")
+                        st.rerun()
+
+        with tab3:
+            st.markdown("### 📥 Import Emission Factors from File")
+            st.info("""
+            **Import CSV/Excel file with emission factors**
+
+            Required columns:
+            - `description`: Factor description
+            - `factor_value`: Numeric emission factor value
+            - `factor_unit`: Unit (e.g., kg CO2e/GJ)
+            - `scope`: Emission scope (1, 2, or 3)
+            - `subcategory`: Activity subcategory
+
+            Optional columns:
+            - `authority`: Source authority (EPA, DEFRA, IPCC, etc.)
+            - `year`: Publication year
+            - `region`: Geographic region
+            - `source_reference`: URL or reference
+            - `notes`: Additional notes
+            """)
+
+            uploaded_file = st.file_uploader("Upload CSV or Excel file", type=['csv', 'xlsx'])
+
+            if uploaded_file:
+                import pandas as pd
+                from ghgcore.models import EmissionFactor
+
+                try:
+                    # Read file
+                    if uploaded_file.name.endswith('.csv'):
+                        df = pd.read_csv(uploaded_file)
+                    else:
+                        df = pd.read_excel(uploaded_file)
+
+                    st.write(f"**Preview:** {len(df)} rows")
+                    st.dataframe(df.head(10))
+
+                    # Validate required columns
+                    required_cols = ['description', 'factor_value', 'factor_unit', 'scope', 'subcategory']
+                    missing_cols = [col for col in required_cols if col not in df.columns]
+
+                    if missing_cols:
+                        st.error(f"Missing required columns: {', '.join(missing_cols)}")
+                    else:
+                        if st.button("Import All Factors"):
+                            imported = 0
+                            errors = []
+
+                            for idx, row in df.iterrows():
+                                try:
+                                    ef = EmissionFactor(
+                                        description=str(row['description']),
+                                        factor_value=float(row['factor_value']),
+                                        factor_unit=str(row['factor_unit']),
+                                        scope=int(row['scope']),
+                                        subcategory=str(row['subcategory']),
+                                        authority=str(row.get('authority')) if pd.notna(row.get('authority')) else None,
+                                        year=int(row.get('year')) if pd.notna(row.get('year')) else None,
+                                        region=str(row.get('region', 'Global')) if pd.notna(row.get('region')) else 'Global',
+                                        source_reference=str(row.get('source_reference')) if pd.notna(row.get('source_reference')) else None,
+                                        notes=str(row.get('notes')) if pd.notna(row.get('notes')) else None
+                                    )
+                                    session.add(ef)
+                                    imported += 1
+                                except Exception as e:
+                                    errors.append(f"Row {idx + 1}: {str(e)}")
+
+                            session.commit()
+
+                            if errors:
+                                st.warning(f"Imported {imported} factors with {len(errors)} errors")
+                                with st.expander("View Errors"):
+                                    for error in errors:
+                                        st.write(error)
+                            else:
+                                st.success(f"✅ Successfully imported {imported} emission factors!")
+                            st.rerun()
+
+                except Exception as e:
+                    st.error(f"Error reading file: {str(e)}")
 
 
 def show_results():

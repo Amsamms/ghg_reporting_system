@@ -1,0 +1,11 @@
+description,factor_value,factor_unit,scope,subcategory,authority,year,region,source_reference,notes
+Natural Gas Combustion,56.1,kg CO2e/GJ,1,stationary_combustion,EPA,2023,USA,https://www.epa.gov/climateleadership/ghg-emission-factors-hub,Stationary combustion of natural gas
+Diesel Combustion (Mobile),74.1,kg CO2e/GJ,1,mobile_combustion,EPA,2023,USA,https://www.epa.gov/climateleadership/ghg-emission-factors-hub,Mobile combustion of diesel fuel
+Grid Electricity (Egypt),0.502,kg CO2e/kWh,2,purchased_electricity,IEA,2023,Egypt,https://www.iea.org/data-and-statistics,Egyptian grid electricity emission factor
+Grid Electricity (USA),0.417,kg CO2e/kWh,2,purchased_electricity,EPA,2023,USA,https://www.epa.gov/egrid,US national average grid electricity
+Crude Oil Flaring,3.15,kg CO2e/bbl,1,flaring,API,2023,Global,API Compendium 2023,Flaring of crude oil associated gas
+Methane Fugitive (Equipment Leaks),28,kg CO2e/kg CH4,1,fugitives,IPCC,2023,Global,IPCC AR5 GWP values,Fugitive methane emissions (100-year GWP)
+Employee Commuting (Car),0.192,kg CO2e/km,3,employee_commuting,DEFRA,2023,UK,DEFRA Conversion Factors 2023,Average car commuting emissions
+Business Travel (Air - Short Haul),0.156,kg CO2e/passenger-km,3,business_travel,DEFRA,2023,Global,DEFRA Conversion Factors 2023,Short-haul flight emissions per passenger
+Waste to Landfill,0.453,kg CO2e/kg,3,waste_disposal,EPA,2023,USA,EPA WARM Model,Municipal solid waste to landfill
+Steam from External Source,0.067,kg CO2e/kg,2,purchased_steam,IPCC,2023,Global,IPCC Guidelines,Purchased steam from third party
